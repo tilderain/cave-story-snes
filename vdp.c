@@ -26,14 +26,14 @@ void vdp_set_window(uint8_t x, uint8_t y) {}
 
 // --- DMA / Memory Transfer ---
 
-void vdp_dma_vram(uint32_t from, uint16_t to, uint16_t len) {}
-void vdp_dma_cram(uint32_t from, uint16_t to, uint16_t len) {}
-void vdp_dma_vsram(uint32_t from, uint16_t to, uint16_t len) {}
+//void vdp_dma_vram(uint32_t from, uint16_t to, uint16_t len) {}
+//void vdp_dma_cram(uint32_t from, uint16_t to, uint16_t len) {}
+//void vdp_dma_vsram(uint32_t from, uint16_t to, uint16_t len) {}
 
 // --- Tile Management ---
 
-void vdp_tiles_load(volatile const uint32_t *data, uint16_t index, uint16_t num) {}
-void vdp_tiles_load_from_rom(volatile const uint32_t *data, uint16_t index, uint16_t num) {}
+//void vdp_tiles_load(volatile const uint32_t *data, uint16_t index, uint16_t num) {}
+//void vdp_tiles_load_from_rom(volatile const uint32_t *data, uint16_t index, uint16_t num) {}
 
 // --- Map / Plane Management ---
 
@@ -100,7 +100,7 @@ void vdp_sprites_update() {}
 
 // --- Text / Fonts ---
 
-void vdp_font_load(const uint32_t *tiles) {}
+//void vdp_font_load(const uint32_t *tiles) {}
 void vdp_font_pal(uint16_t pal) {}
 
 void vdp_puts(uint16_t plan, const char *str, uint16_t x, uint16_t y) {

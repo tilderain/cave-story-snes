@@ -1,8 +1,8 @@
 
+
 .include "data_config.asm"
+
 .section ".rodata1" superfree
-
-
 
 
 
@@ -29,6 +29,9 @@ walksndend:
 BIN UFTC_Almond "./res/Stage/PrtAlmond_vert.pic"
 BIN UFTC_Barr   "./res/Stage/PrtBarr_vert.pic"
 
+
+; --- Auto-split: Switching to Bank 2 ---
+
 .ends
 
 ; --- Auto-split: Switching to Bank 2 ---
@@ -39,12 +42,18 @@ BIN UFTC_Cent   "./res/Stage/PrtCent_vert.pic"
 
 ; --- Auto-split: Switching to Bank 2 ---
 
+
+; --- Auto-split: Switching to Bank 3 ---
+
 .ends
 
 ; --- Auto-split: Switching to Bank 3 ---
 .section ".rodata3" superfree
 BIN UFTC_EggIn  "./res/Stage/PrtEggIn_vert.pic"
 BIN UFTC_Eggs   "./res/Stage/Eggs/PrtEggs_vert.pic"
+
+
+; --- Auto-split: Switching to Bank 4 ---
 
 .ends
 
@@ -53,6 +62,9 @@ BIN UFTC_Eggs   "./res/Stage/Eggs/PrtEggs_vert.pic"
 BIN UFTC_EggX   "./res/Stage/PrtEggX1_vert.pic"
 BIN UFTC_Fall   "./res/Stage/PrtFall_vert.pic"
 BIN UFTC_Gard   "./res/Stage/PrtGard_vert.pic"
+
+
+; --- Auto-split: Switching to Bank 5 ---
 
 .ends
 
@@ -64,12 +76,18 @@ BIN UFTC_Hell   "./res/Stage/Hell/PrtHell_vert.pic"
 ; --- Auto-split: Switching to Bank 3 ---
 BIN UFTC_Jail   "./res/Stage/PrtJail_vert.pic"
 
+
+; --- Auto-split: Switching to Bank 6 ---
+
 .ends
 
 ; --- Auto-split: Switching to Bank 6 ---
 .section ".rodata6" superfree
 BIN UFTC_Labo   "./res/Stage/PrtLabo_vert.pic"
 BIN UFTC_Maze   "./res/Stage/Maze/PrtMaze_vert.pic"
+
+
+; --- Auto-split: Switching to Bank 7 ---
 
 .ends
 
@@ -82,6 +100,9 @@ BIN UFTC_Pens   "./res/Stage/PrtPens_vert.pic"
 
 ; --- Auto-split: Switching to Bank 4 ---
 
+
+; --- Auto-split: Switching to Bank 8 ---
+
 .ends
 
 ; --- Auto-split: Switching to Bank 8 ---
@@ -89,12 +110,18 @@ BIN UFTC_Pens   "./res/Stage/PrtPens_vert.pic"
 BIN UFTC_River  "./res/Stage/PrtRiver_vert.pic"
 BIN UFTC_Sand   "./res/Stage/PrtSand_vert.pic"
 
+
+; --- Auto-split: Switching to Bank 9 ---
+
 .ends
 
 ; --- Auto-split: Switching to Bank 9 ---
 .section ".rodata9" superfree
 BIN UFTC_Store  "./res/Stage/PrtStore_vert.pic"
 BIN UFTC_Weed   "./res/Stage/PrtWeed_vert.pic"
+
+
+; --- Auto-split: Switching to Bank 10 ---
 
 .ends
 
@@ -109,12 +136,18 @@ BIN UFTC_Blcny  "./res/Stage/White/PrtBlcny_vert.pic"
 ; --- Auto-split: Switching to Bank 5 ---
 BIN UFTC_EggX2  "./res/Stage/PrtEggX2_vert.pic"
 
+
+; --- Auto-split: Switching to Bank 11 ---
+
 .ends
 
 ; --- Auto-split: Switching to Bank 11 ---
 .section ".rodata11" superfree
 BIN UFTC_Eggs2  "./res/Stage/Eggs/PrtEggs2_vert.pic"
 BIN UFTC_MazeM  "./res/Stage/Maze/PrtMazeM_vert.pic"
+
+
+; --- Auto-split: Switching to Bank 12 ---
 
 .ends
 
@@ -180,6 +213,9 @@ BIN BG_Gard		"./res/back/bkGard.pic"
 BIN BG_Gray		"./res/back/bkGray.pic" 
 BIN BG_Cent		"./res/back/bkCent.pic" 
 
+
+; --- Auto-split: Switching to Bank 13 ---
+
 .ends
 
 ; --- Auto-split: Switching to Bank 13 ---
@@ -229,6 +265,9 @@ BIN PAL_RiverAlt "./res/Stage/PrtRiver_alt_vert.pal"
 ; Tile Attributes
 BIN PXA_Almond	"./res/Stage/Almond.pxa"
 BIN PXA_Barr	"./res/Stage/Barr.pxa"
+
+
+; --- Auto-split: Switching to Bank 14 ---
 
 .ends
 
@@ -335,6 +374,9 @@ BIN PXM_EggR	"./res/Stage/EggR.cpxm"
 BIN PXM_EggR2	"./res/Stage/EggR2.cpxm"
 BIN PXM_EggX	"./res/Stage/EggX.cpxm"
 
+
+; --- Auto-split: Switching to Bank 15 ---
+
 .ends
 
 ; --- Auto-split: Switching to Bank 15 ---
@@ -419,6 +461,9 @@ BIN PXE_Frog	"./res/Stage/Frog.pxe"
 BIN PXE_Gard	"./res/Stage/Gard.pxe"
 BIN PXE_Hell1	"./res/Stage/Hell1.pxe"
 
+
+; --- Auto-split: Switching to Bank 16 ---
+
 .ends
 
 ; --- Auto-split: Switching to Bank 16 ---
@@ -489,6 +534,9 @@ BIN     NPC_TABLE		"./res/npc.tbl"
 ;BIN		PAT_MoonTop		"./res/back/bkMoonTop.pat"
 ;BIN		MAP_MoonTop		"./res/back/bkMoonTop.map"
 
+
+; --- Auto-split: Switching to Bank 17 ---
+
 .ends
 
 ; --- Auto-split: Switching to Bank 17 ---
@@ -525,6 +573,9 @@ BIN		MAP_MoonBtm		"./res/back/bkMoonBottom.map"
 BIN		PAT_Ill01	"./res/credits/ill01.pat"
 BIN		MAP_Ill01	"./res/credits/ill01.map"
 
+
+; --- Auto-split: Switching to Bank 18 ---
+
 .ends
 
 ; --- Auto-split: Switching to Bank 18 ---
@@ -533,6 +584,9 @@ BIN		PAT_Ill02	"./res/credits/ill02.pat"
 BIN		MAP_Ill02	"./res/credits/ill02.map"
 BIN		PAT_Ill03	"./res/credits/ill03.pat"
 BIN		MAP_Ill03	"./res/credits/ill03.map"
+
+
+; --- Auto-split: Switching to Bank 19 ---
 
 .ends
 
@@ -546,6 +600,9 @@ BIN		MAP_Ill04	"./res/credits/ill04.map"
 BIN		PAT_Ill05	"./res/credits/ill05.pat"
 BIN		MAP_Ill05	"./res/credits/ill05.map"
 
+
+; --- Auto-split: Switching to Bank 20 ---
+
 .ends
 
 ; --- Auto-split: Switching to Bank 20 ---
@@ -554,6 +611,9 @@ BIN		PAT_Ill06	"./res/credits/ill06.pat"
 BIN		MAP_Ill06	"./res/credits/ill06.map"
 BIN		PAT_Ill07	"./res/credits/ill07.pat"
 BIN		MAP_Ill07	"./res/credits/ill07.map"
+
+
+; --- Auto-split: Switching to Bank 21 ---
 
 .ends
 
@@ -567,6 +627,9 @@ BIN		MAP_Ill09	"./res/credits/ill09.map"
 
 ; --- Auto-split: Switching to Bank 12 ---
 
+
+; --- Auto-split: Switching to Bank 22 ---
+
 .ends
 
 ; --- Auto-split: Switching to Bank 22 ---
@@ -575,6 +638,9 @@ BIN		PAT_Ill10	"./res/credits/ill10.pat"
 BIN		MAP_Ill10	"./res/credits/ill10.map"
 BIN		PAT_Ill11	"./res/credits/ill11.pat"
 BIN		MAP_Ill11	"./res/credits/ill11.map"
+
+
+; --- Auto-split: Switching to Bank 23 ---
 
 .ends
 
@@ -588,6 +654,9 @@ BIN		MAP_Ill14	"./res/credits/ill14.map"
 BIN		PAT_Ill15	"./res/credits/ill15.pat"
 BIN		MAP_Ill15	"./res/credits/ill15.map"
 
+
+; --- Auto-split: Switching to Bank 24 ---
+
 .ends
 
 ; --- Auto-split: Switching to Bank 24 ---
@@ -599,6 +668,9 @@ BIN		MAP_Ill16	"./res/credits/ill16.map"
 ; --- Auto-split: Switching to Bank 13 ---
 BIN		PAT_Ill17	"./res/credits/ill17.pat"
 BIN		MAP_Ill17	"./res/credits/ill17.map"
+
+
+; --- Auto-split: Switching to Bank 25 ---
 
 .ends
 
@@ -621,6 +693,9 @@ BIN LS_09		"./res/save/09_labyrinth.sram-trim"
 BIN LS_10		"./res/save/10_monsterx.sram-trim"
 BIN LS_11		"./res/save/11_labyrinthm.sram-trim"
 BIN LS_12		"./res/save/12_core.sram-trim"
+
+
+; --- Auto-split: Switching to Bank 26 ---
 
 .ends
 
@@ -784,6 +859,9 @@ BIN TSC_Blcny2	"./res/tsc/en/Stage/Blcny2.tsb"
 BIN TSC_Cave	"./res/tsc/en/Stage/Cave.tsb"
 BIN TSC_Cemet	"./res/tsc/en/Stage/Cemet.tsb"
 
+
+; --- Auto-split: Switching to Bank 27 ---
+
 .ends
 
 ; --- Auto-split: Switching to Bank 27 ---
@@ -826,6 +904,9 @@ BIN TSC_Hell4	"./res/tsc/en/Stage/Hell4.tsb"
 BIN TSC_Hell42	"./res/tsc/en/Stage/Hell42.tsb"
 BIN TSC_Island	"./res/tsc/en/Stage/Island.tsb"
 
+
+; --- Auto-split: Switching to Bank 28 ---
+
 .ends
 
 ; --- Auto-split: Switching to Bank 28 ---
@@ -856,6 +937,9 @@ BIN TSC_MiBox	"./res/tsc/en/Stage/MiBox.tsb"
 BIN TSC_Mimi	"./res/tsc/en/Stage/Mimi.tsb"
 BIN TSC_Momo	"./res/tsc/en/Stage/Momo.tsb"
 
+
+; --- Auto-split: Switching to Bank 29 ---
+
 .ends
 
 ; --- Auto-split: Switching to Bank 29 ---
@@ -884,6 +968,9 @@ BIN TSC_Start	"./res/tsc/en/Stage/Start.tsb"
 BIN TSC_Statue	"./res/tsc/en/Stage/Statue.tsb"
 BIN TSC_Stream	"./res/tsc/en/Stage/Stream.tsb"
 
+
+; --- Auto-split: Switching to Bank 30 ---
+
 .ends
 
 ; --- Auto-split: Switching to Bank 30 ---
@@ -892,6 +979,7 @@ BIN TSC_Weed	"./res/tsc/en/Stage/Weed.tsb"
 BIN TSC_WeedB	"./res/tsc/en/Stage/WeedB.tsb"
 BIN TSC_WeedD	"./res/tsc/en/Stage/WeedD.tsb"
 BIN TSC_WeedS	"./res/tsc/en/Stage/WeedS.tsb"
+
 
 
 

@@ -1,77 +1,84 @@
-.include "data_config.asm"
 
-.ROMBANKSIZE $10000             ; Every ROM bank is 32 KBytes in size
-.ROMBANKS 24                     ; 2 Mbits - Tell WLA we want to use 4 ROM Banks
+
+.include "data_config.asm"
 
 
 ; --- Part 12 ---
 .section ".rodata_p12" superfree
-BIN TSC_Almond	"./res/tsc/en/Stage/Almond.tsb"
-BIN TSC_Ballo1	"./res/tsc/en/Stage/Ballo1.tsb"
-BIN TSC_Ballo2	"./res/tsc/en/Stage/Ballo2.tsb"
-BIN TSC_Barr	"./res/tsc/en/Stage/Barr.tsb"
-BIN TSC_Blcny1	"./res/tsc/en/Stage/Blcny1.tsb"
-BIN TSC_Blcny2	"./res/tsc/en/Stage/Blcny2.tsb"
-BIN TSC_Cave	"./res/tsc/en/Stage/Cave.tsb"
-BIN TSC_Cemet	"./res/tsc/en/Stage/Cemet.tsb"
-BIN TSC_Cent	"./res/tsc/en/Stage/Cent.tsb"
-BIN TSC_CentW	"./res/tsc/en/Stage/CentW.tsb"
-BIN TSC_Chako	"./res/tsc/en/Stage/Chako.tsb"
-BIN TSC_Clock	"./res/tsc/en/Stage/Clock.tsb"
-BIN TSC_Comu	"./res/tsc/en/Stage/Comu.tsb"
-BIN TSC_Cthu	"./res/tsc/en/Stage/Cthu.tsb"
-BIN TSC_Cthu2	"./res/tsc/en/Stage/Cthu2.tsb"
-BIN TSC_Curly	"./res/tsc/en/Stage/Curly.tsb"
-BIN TSC_CurlyS	"./res/tsc/en/Stage/CurlyS.tsb"
-BIN TSC_Dark	"./res/tsc/en/Stage/Dark.tsb"
-BIN TSC_Drain	"./res/tsc/en/Stage/Drain.tsb"
-BIN TSC_e_Blcn	"./res/tsc/en/Stage/e_Blcn.tsb"
-BIN TSC_e_Ceme	"./res/tsc/en/Stage/e_Ceme.tsb"
-BIN TSC_e_Jenk	"./res/tsc/en/Stage/e_Jenk.tsb"
-BIN TSC_e_Labo	"./res/tsc/en/Stage/e_Labo.tsb"
-BIN TSC_e_Malc	"./res/tsc/en/Stage/e_Malc.tsb"
-BIN TSC_e_Maze	"./res/tsc/en/Stage/e_Maze.tsb"
-BIN TSC_e_Sky	"./res/tsc/en/Stage/e_Sky.tsb"
-BIN TSC_EgEnd1	"./res/tsc/en/Stage/EgEnd1.tsb"
-BIN TSC_EgEnd2	"./res/tsc/en/Stage/EgEnd2.tsb"
-BIN TSC_Egg1	"./res/tsc/en/Stage/Egg1.tsb"
-BIN TSC_Egg6	"./res/tsc/en/Stage/Egg6.tsb"
-BIN TSC_EggR	"./res/tsc/en/Stage/EggR.tsb"
-BIN TSC_EggR2	"./res/tsc/en/Stage/EggR2.tsb"
-BIN TSC_Eggs	"./res/tsc/en/Stage/Eggs.tsb"
-BIN TSC_Eggs2	"./res/tsc/en/Stage/Eggs2.tsb"
-BIN TSC_EggX	"./res/tsc/en/Stage/EggX.tsb"
-BIN TSC_EggX2	"./res/tsc/en/Stage/EggX2.tsb"
-BIN TSC_Fall	"./res/tsc/en/Stage/Fall.tsb"
-BIN TSC_Frog	"./res/tsc/en/Stage/Frog.tsb"
-BIN TSC_Gard	"./res/tsc/en/Stage/Gard.tsb"
-BIN TSC_Hell1	"./res/tsc/en/Stage/Hell1.tsb"
-BIN TSC_Hell2	"./res/tsc/en/Stage/Hell2.tsb"
-BIN TSC_Hell3	"./res/tsc/en/Stage/Hell3.tsb"
-BIN TSC_Hell4	"./res/tsc/en/Stage/Hell4.tsb"
-BIN TSC_Hell42	"./res/tsc/en/Stage/Hell42.tsb"
-BIN TSC_Island	"./res/tsc/en/Stage/Island.tsb"
-BIN TSC_Itoh	"./res/tsc/en/Stage/Itoh.tsb"
-BIN TSC_Jail1	"./res/tsc/en/Stage/Jail1.tsb"
-BIN TSC_Jail2	"./res/tsc/en/Stage/Jail2.tsb"
-BIN TSC_Jenka1	"./res/tsc/en/Stage/Jenka1.tsb"
-BIN TSC_Jenka2	"./res/tsc/en/Stage/Jenka2.tsb"
-BIN TSC_Kings	"./res/tsc/en/Stage/Kings.tsb"
-BIN TSC_Little	"./res/tsc/en/Stage/Little.tsb"
-BIN TSC_Lounge	"./res/tsc/en/Stage/Lounge.tsb"
-BIN TSC_Malco	"./res/tsc/en/Stage/Malco.tsb"
-BIN TSC_Mapi	"./res/tsc/en/Stage/Mapi.tsb"
-BIN TSC_MazeA	"./res/tsc/en/Stage/MazeA.tsb"
-BIN TSC_MazeB	"./res/tsc/en/Stage/MazeB.tsb"
-BIN TSC_MazeD	"./res/tsc/en/Stage/MazeD.tsb"
-BIN TSC_MazeH	"./res/tsc/en/Stage/MazeH.tsb"
-BIN TSC_MazeI	"./res/tsc/en/Stage/MazeI.tsb"
-BIN TSC_MazeM	"./res/tsc/en/Stage/MazeM.tsb"
-BIN TSC_MazeO	"./res/tsc/en/Stage/MazeO.tsb"
-BIN TSC_MazeS	"./res/tsc/en/Stage/MazeS.tsb"
+BIN BG_Moon		"./res/back/bkMoon.pic" 
 
 
-; --- Auto-split: Switching to Bank 15 ---
-BIN TSC_MazeW	"./res/tsc/en/Stage/MazeW.tsb"
+; --- Auto-split: Switching to Bank 8 ---
+BIN BG_Fog		"./res/back/bkFog.pic" 
+
+BIN PAL_bkBlue		"./res/back/bkBlue.pal"
+BIN PAL_bkGard		"./res/back/bkGard.pal"
+BIN PAL_bkMaze		"./res/back/bkMaze.pal"
+BIN PAL_bkGray		"./res/back/bkGray.pal"
+BIN PAL_bkGreen		"./res/back/bkGreen.pal"
+BIN PAL_bkFall		"./res/back/bkFall.pal"
+BIN PAL_bkWater		"./res/back/bkWater.pal"
+BIN PAL_bkMoon		"./res/back/bkMoon.pal"
+BIN PAL_bkFog		"./res/back/bkFog.pal"
+BIN PAL_bkRed		"./res/back/bkRed.pal"
+
+BIN PAL_bk0		"./res/back/bk0.pal"
+BIN PAL_bkBlack		"./res/back/bkBlack.pal"
+
+
+; Alternate for waterway (Green background)
+
+BIN PAL_RiverAlt "./res/Stage/PrtRiver_alt_vert.pal"
+; Tile Attributes
+BIN PXA_Almond	"./res/Stage/Almond.pxa"
+BIN PXA_Barr	"./res/Stage/Barr.pxa"
+
+
+; --- Auto-split: Switching to Bank 14 ---
+
+
+; --- Auto-split: Switching to Bank 14 ---
+BIN PXA_Cave	"./res/Stage/Cave.pxa"
+BIN PXA_Cent	"./res/Stage/Cent.pxa"
+BIN PXA_EggIn	"./res/Stage/EggIn.pxa"
+BIN PXA_EggX	"./res/Stage/EggX.pxa"
+BIN PXA_Fall	"./res/Stage/Fall.pxa"
+BIN PXA_Gard	"./res/Stage/Gard.pxa"
+BIN PXA_Jail	"./res/Stage/Jail.pxa"
+BIN PXA_Labo	"./res/Stage/Labo.pxa"
+BIN PXA_Oside	"./res/Stage/Oside.pxa"
+BIN PXA_Pens	"./res/Stage/Pens.pxa"
+BIN PXA_River	"./res/Stage/River.pxa"
+BIN PXA_Sand	"./res/Stage/Sand.pxa"
+BIN PXA_Store	"./res/Stage/Store.pxa"
+BIN PXA_Weed	"./res/Stage/Weed.pxa"
+
+; Optimized Tileset Stages
+BIN PXA_Mimi		"./res/Stage/Mimi/Mimi.pxa"
+BIN PXM_Barr		"./res/Stage/Mimi/Barr.cpxm"
+BIN PXM_Cemet		"./res/Stage/Mimi/Cemet.cpxm"
+BIN PXM_e_Ceme		"./res/Stage/Mimi/e_Ceme.cpxm"
+BIN PXM_MiBox		"./res/Stage/Mimi/MiBox.cpxm"
+BIN PXM_Mimi		"./res/Stage/Mimi/Mimi.cpxm"
+BIN PXM_Plant		"./res/Stage/Mimi/Plant.cpxm"
+BIN PXM_Pool		"./res/Stage/Mimi/Pool.cpxm"
+
+BIN PXA_Eggs		"./res/Stage/Eggs/Eggs.pxa"
+BIN PXM_Eggs		"./res/Stage/Eggs/Eggs.cpxm"
+
+BIN PXA_Eggs2		"./res/Stage/Eggs/Eggs2.pxa"
+BIN PXM_Eggs2		"./res/Stage/Eggs/Eggs2.cpxm"
+
+BIN PXA_Maze		"./res/Stage/Maze/Maze.pxa"
+BIN PXM_e_Maze		"./res/Stage/Maze/e_Maze.cpxm"
+BIN PXM_MazeB		"./res/Stage/Maze/MazeB.cpxm"
+BIN PXM_MazeD		"./res/Stage/Maze/MazeD.cpxm"
+BIN PXM_MazeH		"./res/Stage/Maze/MazeH.cpxm"
+BIN PXM_MazeI		"./res/Stage/Maze/MazeI.cpxm"
+BIN PXM_MazeO		"./res/Stage/Maze/MazeO.cpxm"
+BIN PXM_MazeS		"./res/Stage/Maze/MazeS.cpxm"
+BIN PXM_MazeW		"./res/Stage/Maze/MazeW.cpxm"
+
+BIN PXA_MazeM		"./res/Stage/Maze/MazeM.pxa"
 
 .ends

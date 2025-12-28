@@ -27,17 +27,16 @@
 ;==HiRom==      ; We'll get to HiRom some other time.
 
 .MEMORYMAP                      ; Begin describing the system architecture.
-  SLOTSIZE $10000               ; The slot is $10000 bytes in size. More details on slots later.
+  SLOTSIZE $8000                ; The slot is $8000 bytes in size. More details on slots later.
   DEFAULTSLOT 0                 ; There's only 1 slot in SNES, there are more in other consoles.
-  SLOT 0 $0000                  ; Defines Slot 0's starting address.
+  SLOT 0 $8000                  ; Defines Slot 0's starting address.
   SLOT 1 $0 $2000
   SLOT 2 $2000 $E000
   SLOT 3 $0 $10000
-  SLOT 4 $6000
 .ENDME          ; End MemoryMap definition
 
-.ROMBANKSIZE $10000             ; Every ROM bank is 32 KBytes in size
-.ROMBANKS 24                     ; 2 Mbits - Tell WLA we want to use 4 ROM Banks
+.ROMBANKSIZE $8000             ; Every ROM bank is 32 KBytes in size
+.ROMBANKS 32                     ; 2 Mbits - Tell WLA we want to use 4 ROM Banks
 
 .SNESHEADER
   ID "SNES"                     ; 1-4 letter string, just leave it as "SNES"
@@ -45,10 +44,10 @@
   NAME "CAVE STORY SAMPLE    "  ; Program Title - can't be over 21 bytes,
   ;    "123456789012345678901"  ; use spaces for unused bytes of the name.
 
-  FASTROM
-  HIROM
+  SLOWROM
+  LOROM
 
-  CARTRIDGETYPE $00             ; $00 = ROM only $02 = ROM+SRAM, see WLA documentation for others
+  CARTRIDGETYPE $34             ; $00 = ROM only $02 = ROM+SRAM, see WLA documentation for others
   ROMSIZE $08                   ; $08 = 2 Mbits,  see WLA doc for more..
   SRAMSIZE $00                  ; $00 = No Sram, $01 = 16 kbits, see WLA doc for more..
   COUNTRY $01                   ; $01 = U.S.  $00 = Japan, that's all I know

@@ -1,178 +1,89 @@
-.include "data_config.asm"
 
-.ROMBANKSIZE $10000             ; Every ROM bank is 32 KBytes in size
-.ROMBANKS 24                     ; 2 Mbits - Tell WLA we want to use 4 ROM Banks
+
+.include "data_config.asm"
 
 
 ; --- Part 11 ---
 .section ".rodata_p11" superfree
-BIN		PAT_Ill17	"./res/credits/ill17.pat"
-BIN		MAP_Ill17	"./res/credits/ill17.map"
-BIN		PAT_Ill18	"./res/credits/ill18.pat"
-BIN		MAP_Ill18	"./res/credits/ill18.map"
+BIN UFTC_Ring3  "./res/Stage/White/PrtRing3_vert.pic"
 
-/* Level Select data */
-BIN LS_00		"./res/save/00_firstcave.sram-trim"
-BIN LS_01		"./res/save/01_mimigavillage.sram-trim"
-BIN LS_02		"./res/save/02_eggcorridor.sram-trim"
-BIN LS_03		"./res/save/03_grasstown.sram-trim"
-BIN LS_04		"./res/save/04_malco.sram-trim"
-BIN LS_05		"./res/save/05_balfrog.sram-trim"
-BIN LS_06		"./res/save/06_sandzone.sram-trim"
-BIN LS_07		"./res/save/07_omega.sram-trim"
-BIN LS_08		"./res/save/08_storehouse.sram-trim"
-BIN LS_09		"./res/save/09_labyrinth.sram-trim"
-BIN LS_10		"./res/save/10_monsterx.sram-trim"
-BIN LS_11		"./res/save/11_labyrinthm.sram-trim"
-BIN LS_12		"./res/save/12_core.sram-trim"
-BIN LS_13		"./res/save/13_waterway.sram-trim"
-BIN LS_14		"./res/save/14_eggcorridor2.sram-trim"
-BIN LS_15		"./res/save/15_outerwall.sram-trim"
-BIN LS_16		"./res/save/16_plantation.sram-trim"
-BIN LS_17		"./res/save/17_lastcave.sram-trim"
-BIN LS_18		"./res/save/18_lastcave2.sram-trim"
-BIN LS_19		"./res/save/19_balcony.sram-trim"
-BIN LS_20		"./res/save/20_sacredground.sram"
-BIN LS_21		"./res/save/21_sealchamber.sram"
+BIN PAL_Mimi "./res/Stage/Mimi/PrtMimi_vert.pal"
+BIN PAL_Eggs "./res/Stage/Eggs/PrtEggs_vert.pal"
+BIN PAL_Maze "./res/Stage/Maze/PrtMaze_vert.pal"
+BIN PAL_Blcny "./res/Stage/White/PrtBlcny_vert.pal"
 
 
-/* Start of localizable data */
-.db "LANGDAT", 0
+; --- Auto-split: Switching to Bank 6 ---
+BIN PAL_Ring3 "./res/Stage/White/PrtRing3_vert.pal"
+BIN PAL_Hell "./res/Stage/Hell/PrtHell_vert.pal"
+
+BIN PAL_Almond	"./res/Stage/PrtAlmond_vert.pal"
+BIN PAL_Barr	"./res/Stage/PrtBarr_vert.pal"
+BIN PAL_Cave	"./res/Stage/PrtCave_vert.pal"
+BIN PAL_Cent	"./res/Stage/PrtCent_vert.pal"
+BIN PAL_EggIn	"./res/Stage/PrtEggIn_vert.pal"
+BIN PAL_EggX	"./res/Stage/PrtEggX1_vert.pal"
+BIN PAL_Fall	"./res/Stage/PrtFall_vert.pal"
+BIN PAL_Gard	"./res/Stage/PrtGard_vert.pal"
+BIN PAL_Jail	"./res/Stage/PrtJail_vert.pal"
+BIN PAL_Labo	"./res/Stage/PrtLabo_vert.pal"
+BIN PAL_Oside	"./res/Stage/PrtOside_vert.pal"
+BIN PAL_Pens	"./res/Stage/PrtPens_vert.pal"
+BIN PAL_River	"./res/Stage/PrtRiver_vert.pal"
+BIN PAL_Sand	"./res/Stage/PrtSand_vert.pal"
+BIN PAL_Store	"./res/Stage/PrtStore_vert.pal"
+BIN PAL_Weed	"./res/Stage/PrtWeed_vert.pal"
+
+BIN PAL_Sega		"./res/sprite/sega.pal.bin"
+BIN PAL_Main		"./res/sprite/quote.pal.bin"
+BIN PAL_Sym			"./res/sprite/door.pal.bin"
+BIN PAL_Regu		"./res/sprite/kazuma.pal.bin"
+BIN PAL_Gunsmith	"./res/sprite/gunsmith.pal.bin"
+BIN PAL_Plant		"./res/sprite/flower.pal.bin"
+BIN PAL_Frog		"./res/sprite/balfrog1.pal.bin"
+BIN PAL_Chaco		"./res/sprite/chaco.pal.bin"
+BIN PAL_Jenka		"./res/sprite/jenka.pal.bin"
+BIN PAL_Dark		"./res/sprite/dark.pal.bin"
+BIN PAL_X			"./res/sprite/xbody.pal.bin"
+BIN PAL_XB			"./res/sprite/xbody.pal.bin"
+BIN PAL_LabB		"./res/back/bkMimiRegu.pal.bin"
+BIN PAL_Boulder		"./res/sprite/boulder.pal.bin"
+BIN PAL_MazeM		"./res/back/bkRedPal.pal.bin"
+BIN PAL_Eggs2		"./res/sprite/babydragon.pal.bin"
+BIN PAL_Sisters		"./res/sprite/sishead.pal.bin"
+BIN PAL_Red			"./res/sprite/dripred.pal.bin"
+BIN PAL_Mapi		"./res/sprite/mapignon.pal.bin"
+BIN PAL_Miza		"./res/sprite/misery2.pal.bin"
+BIN PAL_Intro		"./res/sprite/bubbleintro.pal.bin"
+
+BIN BG_Blue		"./res/back/bkBlue.pic" 
+BIN BG_Eggs		"./res/back/bkEggs.pic" 
+BIN BG_Gard		"./res/back/bkGard.pic" 
+BIN BG_Gray		"./res/back/bkGray.pic" 
+BIN BG_Cent		"./res/back/bkCent.pic" 
 
 
-LANGUAGE:
-.db "EN\0\0"
+; --- Auto-split: Switching to Bank 13 ---
 
 
-BMP_ASCII:
-.db 0
+; --- Auto-split: Switching to Bank 13 ---
+BIN BG_Maze		"./res/back/bkMaze.pic" 
+BIN BG_Maze2	"./res/back/bkMaze.pic" 
+BIN BG_Red		"./res/back/bkRed.pic" 
+BIN BG_Water	"./res/back/bkWater.pic"
+BIN BG_LabB		"./res/back/bkMimiRegu.pic" 
+BIN BG_Stream	"./res/back/bkStream.pic" 
+BIN BG_Sand		"./res/back/bkSand.pic" 
+BIN BG_Hell		"./res/back/bkHell.pic" 
+BIN BG_Fall		"./res/back/bkFall.pic" 
 
-BMP_KANJI:
-.db 0
+BIN BG_bk0		"./res/back/bk0.pic" 
+BIN BG_Black		"./res/back/bkBlack.pic" 
 
-STAGE_NAMES:
-.db 0
-
-CREDITS_STR:
-.db 0
-
-CONFIG_STR:
-.db 0
-
-/* Pointer Tables */
-
-TSC_GLOB:
-.dl TSC_ArmsItem
-.dl TSC_Head
-.dl TSC_StageSelect
-.dl TSC_Credits
-
-TSC_STAGE:
-.dl 0
-.dl TSC_Pens1
-.dl TSC_Eggs
-.dl TSC_EggX
-.dl TSC_Egg6
-.dl TSC_EggR
-.dl TSC_Weed
-.dl TSC_Santa
-.dl TSC_Chako
-.dl TSC_MazeI
-.dl TSC_Sand
-.dl TSC_Mimi
-.dl TSC_Cave
-.dl TSC_Start
-.dl TSC_Barr
-.dl TSC_Pool
-.dl TSC_Cemet
-.dl TSC_Plant
-.dl TSC_Shelt
-.dl TSC_Comu
-.dl TSC_MiBox
-.dl TSC_EgEnd1
-.dl TSC_Cthu
-.dl TSC_Egg1
-.dl TSC_Pens2
-.dl TSC_Malco
-.dl TSC_WeedS
-.dl TSC_WeedD
-.dl TSC_Frog
-.dl TSC_Curly
-.dl TSC_WeedB
-.dl TSC_Stream
-.dl TSC_CurlyS
-.dl TSC_Jenka1
-.dl TSC_Dark
-.dl TSC_Gard
-.dl TSC_Jenka2
-.dl TSC_SandE
-.dl TSC_MazeH
-.dl TSC_MazeW
-.dl TSC_MazeO
-.dl TSC_MazeD
-.dl TSC_MazeA
-.dl TSC_MazeB
-.dl TSC_MazeS
-.dl TSC_MazeM
-.dl TSC_Drain
-.dl TSC_Almond
-.dl TSC_River
-.dl TSC_Eggs2
-.dl TSC_Cthu2
-.dl TSC_EggR2
-.dl TSC_EggX2
-.dl TSC_Oside
-.dl TSC_EgEnd2
-.dl TSC_Itoh
-.dl TSC_Cent
-.dl TSC_Jail1
-.dl TSC_Momo
-.dl TSC_Lounge
-.dl TSC_CentW
-.dl TSC_Jail2
-.dl TSC_Blcny1
-.dl TSC_Priso1
-.dl TSC_Ring1
-.dl TSC_Ring2
-.dl TSC_Prefa1
-.dl TSC_Priso2
-.dl TSC_Ring3
-.dl TSC_Little
-.dl TSC_Blcny2
-.dl TSC_Fall
-.dl TSC_Kings
-.dl TSC_Pixel
-.dl TSC_e_Maze
-.dl TSC_e_Jenk
-.dl TSC_e_Malc
-.dl TSC_e_Ceme
-.dl TSC_e_Sky
-.dl TSC_Prefa2
-.dl TSC_Hell1
-.dl TSC_Hell2
-.dl TSC_Hell3
-.dl TSC_Mapi
-.dl TSC_Hell4
-.dl TSC_Hell42
-.dl TSC_Statue
-.dl TSC_Ballo1
-.dl TSC_Ostep
-.dl TSC_e_Labo
-.dl TSC_Pole
-.dl TSC_Island
-.dl TSC_Ballo2
-.dl TSC_e_Blcn
-.dl TSC_Clock
-
-; Scripts (TSC) - English
-; Global
-BIN TSC_ArmsItem	"./res/tsc/en/ArmsItem.tsb"
-BIN TSC_Head		"./res/tsc/en/Head.tsb"
-BIN TSC_StageSelect	"./res/tsc/en/StageSelect.tsb"
-BIN TSC_Credits		"./res/tsc/en/Stage/0.tsb"
-; Stage Specific
+BIN BG_Green		"./res/back/bkGreen.pic" 
 
 
-; --- Auto-split: Switching to Bank 14 ---
+
+; --- Auto-split: Switching to Bank 7 ---
 
 .ends

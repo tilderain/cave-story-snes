@@ -2,9 +2,9 @@ import os
 import re
 
 # CONFIGURATION
-INPUT_FILE = "data.asm"       # Your original asm file name
-OUTPUT_FILE = "data_split.asm" # The new file to generate
-MAX_SECTION_SIZE = 65500      # 64KB is 65536, keeping a small buffer for safety
+INPUT_FILE = "data.asmr"       # Your original asm file name
+OUTPUT_FILE = "data_split.asmr" # The new file to generate
+MAX_SECTION_SIZE = 32000      # 64KB is 65536, keeping a small buffer for safety
 
 # Regex to find BIN macro calls: BIN Label "Path"
 regex_bin = re.compile(r'^\s*BIN\s+\w+\s+"([^"]+)"')

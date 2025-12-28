@@ -2,9 +2,9 @@ import os
 import re
 
 # CONFIGURATION
-INPUT_FILE = "data.asmr"       # Your source file
+INPUT_FILE = "data_split.asmr"       # Your source file
 OUTPUT_BASE = "data_part"     # Output prefix (data_part0.asm, data_part1.asm...)
-MAX_BANK_SIZE = 65535         # Safe limit per file (under 64KB to be safe)
+MAX_BANK_SIZE = 65535/2         # Safe limit per file (under 64KB to be safe)
 
 # Regex setup
 regex_bin = re.compile(r'^\s*BIN\s+\w+\s+"([^"]+)"')

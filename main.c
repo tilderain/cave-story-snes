@@ -1,3 +1,6 @@
+
+
+
 /*---------------------------------------------------------------------------------
 
 
@@ -13,6 +16,10 @@
 
 #include "bank_data.h"
 
+int sa1_main() {
+ // ret = run();
+
+}
 //---------------------------------------------------------------------------------
 extern char SOUNDBANK__;
 extern char jumpsnd, jumpsndend;
@@ -182,6 +189,11 @@ void marioupdate(u8 idx)
 //---------------------------------------------------------------------------------
 int main(void)
 {
+
+
+
+    //sa1_init_manual();
+    //sa1_start_task();
     // Initialize sound engine (take some time)
     spcBoot();
 
@@ -227,13 +239,13 @@ int main(void)
 
     //stage_load(13);
     // Init sprite engine (0x0000 for large, 0x1000 for small)
-    oamInitDynamicSprite(0x0000, 0x1000, 0, 0, OBJ_SIZE8_L16);
+    //oamInitDynamicSprite(0x0000, 0x1000, 0, 0, OBJ_SIZE8_L16);
 
     // Object engine activate
-    objInitEngine();
+    //objInitEngine();
 
     // Init function for state machine
-    objInitFunctions(0, &marioinit, &marioupdate, NULL);
+    //objInitFunctions(0, &marioinit, &marioupdate, NULL);
 
     uint16_t frame = 0;
 
@@ -270,8 +282,8 @@ int main(void)
         //    stage_update_screen(x, y);
         }
 
-        if(pad0 & KEY_L) {stage_no--; stage_load(stage_no);}
-        if(pad0 & KEY_R) {stage_no++; stage_load(stage_no);}
+        //if(pad0 & KEY_L) {stage_no--; stage_load(stage_no);}
+        //if(pad0 & KEY_R) {stage_no++; stage_load(stage_no);}
 
         game_main(0);
         // Update the map regarding the camera
