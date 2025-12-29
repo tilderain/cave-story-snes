@@ -61,7 +61,7 @@ uint16_t stageWidth, stageHeight = 0;
  uint8_t stageTileset = 0;
 // Prepares to draw off-screen tiles when stage_update() is later called
 // Camera calls this each time it scrolls past 1 block length (16 pixels)
- int8_t morphingRow, morphingColumn = 0;
+ int8_t morphingRow = 0, morphingColumn = 0;
 
  uint16_t backScrollTimer = 0;
  uint8_t stageBackgroundType = 0;
@@ -291,6 +291,7 @@ void stage_load(uint16_t id) {
     //z80_request();
 	//test_draw_sequential(); // Draw 64x32 foreground PXM area at camera's position
 	stage_draw_screen();
+	camera_mark_dma_full_screen();
     //z80_release();
     enable_ints;
 

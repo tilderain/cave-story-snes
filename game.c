@@ -337,7 +337,8 @@ void game_main(uint8_t load) {
     REG_CGDATA = 0x00;
 		oamUpdate(); 
 		// Map buffer is updated by stage_draw_screen() when needed, no need to copy every frame
-		dmaCopyVram(map_buffer_bg1, 0x6000, 4096);
+		camera_execute_dma();
+		//dmaCopyVram(map_buffer_bg1, 0x6000, 4096);
         //dmaCopyVram(map_buffer_bg2, 0x7000, 2048);
 
     	// 3. Increment our counter because we successfully finished one frame

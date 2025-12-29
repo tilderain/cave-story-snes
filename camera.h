@@ -25,3 +25,6 @@ void camera_set_position(int32_t x, int32_t y);
 void camera_shake(uint16_t time);
 // Per frame update for camera, moves toward the target entity and scrolls the tilemap
 void camera_update();
+
+
+void camera_execute_dma();
