@@ -1,3 +1,5 @@
+#include "common.h"
+
 #define SRAM_UNCHECKED		0x00
 #define SRAM_VALID_EMPTY	0x01
 #define SRAM_VALID_SAVE		0x02

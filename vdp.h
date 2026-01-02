@@ -122,6 +122,11 @@ typedef signed int	int32_t;
 void vdp_init();
 // Wait until next vblank
 void vdp_vsync();
+void setScreenOn(void);
+void setScreenOff(void);
+void WaitForVBlank(void);
+void vdp_set_vblank_flag(void); // Called from NMI interrupt
+void bgSetScroll(uint8_t bg, int16_t h, int16_t v);
 
 // Register stuff
 void vdp_set_display(uint8_t enabled);
@@ -187,3 +192,25 @@ void vdp_font_load(const uint32_t *tiles);
 void vdp_font_pal(uint16_t pal);
 void vdp_puts(uint16_t plan, const char *str, uint16_t x, uint16_t y);
 void vdp_text_clear(uint16_t plan, uint16_t x, uint16_t y, uint16_t len);
+
+// SNES native graphics functions (replacing pvsneslib compatibility)
+void dmaCopyVram(const void *src, uint16_t dest, uint16_t size);
+void setPaletteColor(uint8_t index, uint16_t color);
+void setMode(uint8_t mode, uint8_t bgSize);
+void bgSetEnable(uint8_t bg);
+void bgInitTileSet(uint8_t bg, const void *tiles, const void *palette, uint16_t tileoffset, uint16_t tilesize, uint16_t palsize, uint16_t colors, uint16_t vramAddr);
+int random(void);
+
+// OAM functions
+void oamUpdate(void);
+void oamSet(uint8_t id, int16_t x, int16_t y, uint8_t priority, uint8_t hFlip, uint8_t vFlip, uint16_t gfxOffset, uint8_t paletteOffset);
+
+// DMA utilities
+void DMA_flushQueue(void);
+
+// Debug/Console
+void consoleNocashMessage(const char *format, ...);
+
+// Audio (stubs)
+void spcProcess(void);
+void spcPlaySound(uint8_t sound);

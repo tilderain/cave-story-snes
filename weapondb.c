@@ -1,8 +1,9 @@
 #include "common.h"
+#include <stddef.h>
 
 //#include "resources.h"
-#include "vdp.h"
 #include "weapon.h"
+#include "vdp.h"
 
 #include "tables.h"
 

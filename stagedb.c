@@ -2,6 +2,8 @@
 #include "bank_data.h"
 //#include "resources.h"
 #include "tables.h"
+#include "npc.h"
+#include "sheet.h"
 extern const uint8_t PXM_Cave[];
 extern const uint8_t PXE_Cave[];
 const stage_info_def stage_info[STAGE_COUNT] = {
@@ -106,4 +108,16 @@ const stage_info_def stage_info[STAGE_COUNT] = {
 	{ PXM_Ballo2,	PXE_Ballo2,	&PAL_LabB,	10,	14,	"Seal Chamber" },
 	{ PXM_e_Blcn,	PXE_e_Blcn,	&PAL_Regu,	21,	0,	"Credits" },
 	{ PXM_Clock,	PXE_Clock,	&PAL_Regu,	15,	7,	"Clock" },
+};
+
+// Stub definition for npc_info - was previously in pvsneslib_compat.c
+// Initialize all entries with zeros/NULLs - C will zero-initialize remaining elements
+const npc_info_def npc_info[NPC_COUNT] = {
+	{ NULL, NOSHEET, 0, 0, NULL, NULL, NULL, {0} }
+};
+
+// Stub definition for background_info - was previously in pvsneslib_compat.c
+// Initialize all entries with zeros - C will zero-initialize remaining elements
+const background_info_def background_info[BACKGROUND_COUNT] = {
+	{ 0, 0, 0, 0, 0 }
 };

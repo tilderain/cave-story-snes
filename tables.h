@@ -4,6 +4,8 @@
  * Any time you see a const pointer, that is pointing to ROM data
  */
 
+#include "common.h"
+
 // Information about each stage, indexed by stageID
 #define STAGE_COUNT 95
 typedef struct {
@@ -39,10 +41,10 @@ typedef struct {
 // The IDs deviate from the original game. I do not know the "correct" order
 #define BACKGROUND_COUNT 17
 typedef struct {
-	unsigned long long tileset; // Graphical tile data to load
+	uint32_t tileset; // Graphical tile data to load
 	// Backgrounds do not use their own palette and instead "share" with any other of the
 	// 4 already loaded. This value specifies which, like PAL0, PAL1, etc
-	unsigned long long palette;
+	uint32_t palette;
 	// The "type" is which behavior/algorithm to use when loading/scrolling the background
 	// 0 - Draw a plain tiled image into VDP_PLAN_B
 	// 1 - Moon/Fog - Draw from a specified pattern into VDP_PLAN_B and scroll the clouds
@@ -128,7 +130,7 @@ typedef struct {
 			uint16_t id;
 			const Palette *data;
 		} palette;
-	};
+	} u;
 } credits_info_def;
 // Credits illustrations
 typedef struct {

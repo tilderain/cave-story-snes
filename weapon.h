@@ -1,4 +1,8 @@
-#pragma once
+#ifndef WEAPON_H
+#define WEAPON_H
+
+#include "common.h"
+
 // Number of different weapon types
 #define WEAPON_COUNT 14
 // Maximum number of weapons the player can carry in their inventory
@@ -80,10 +84,13 @@ void weapon_fire_spur(Weapon *w);
 
 extern const WeaponFunc weapon_fire_array[WEAPON_COUNT];
 
-static inline void bullet_deactivate(Bullet *b) {
-    b->extent = (extent_box) {};
-    b->ttl = 0;
-}
+#define bullet_deactivate(b) do { \
+    (b)->extent.x1 = 0; \
+    (b)->extent.y1 = 0; \
+    (b)->extent.x2 = 0; \
+    (b)->extent.y2 = 0; \
+    (b)->ttl = 0; \
+} while(0)
 
 #define bullet_update(b); bullet_update_array[(b).type](&(b))
 
@@ -106,3 +113,5 @@ extern const BulletFunc bullet_update_array[WEAPON_COUNT];
 void bullet_missile_explode(Bullet *b);
 // Used by Curly boss to know when to enable her shield
 uint8_t bullet_missile_is_exploding();
+
+#endif // WEAPON_H

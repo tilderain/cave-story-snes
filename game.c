@@ -1,4 +1,5 @@
 #include "common.h"
+#include "snes_regs_xc.h"
 
 #include "audio.h"
 #include "camera.h"
@@ -27,8 +28,7 @@
 
 //#include "gba.h"
 
-#define z80_request()
-#define z80_release()
+// z80_request and z80_release are defined in common.h
 uint8_t gamemode = 0;
 uint8_t paused = 0;
 uint8_t gameFrozen = 0;
@@ -80,16 +80,19 @@ void game_reset(uint8_t load) {
 }
 u8 tscState = 0;
 u8 pal_mode = 0;
-u8 joytype = 0;
+// joytype is defined in joy.c, declared in joy.h
    		u8 stage_no = 14;
 
-#include <snes.h>
 void game_main(uint8_t load) {
 	camera_init();
 
 	player_init();
 
 	gamemode = GM_GAME;
+	
+	// Enable NMI (VBlank) interrupts so vdp_vsync() works
+	// Bit 7 (0x80) enables NMI interrupts
+	REG_NMITIMEN = 0x80;
 
 	//vdp_colors(0, PAL_FadeOut, 64);
 	//vdp_color(15, 0x000);
@@ -111,15 +114,15 @@ void game_main(uint8_t load) {
 		//vdp_fade(PAL_FadeOut, NULL, 4, TRUE);
 	}
 	paused = FALSE;
-	player.x = (long long)((10LL*16LL) << CSF);
-	player.y = (long long)((8LL*16LL) << CSF);
+	player.x = (int32_t)((10LL*16LL) << CSF);
+	player.y = (int32_t)((8LL*16LL) << CSF);
 	player.x_next = player.x;
 	player.y_next = player.y;
 	while(TRUE) {
-		PF_BGCOLOR(0x000);
+		//PF_BGCOLOR(0x000);
 
 		if(paused) {
-            PF_BGCOLOR(0x0E0);
+            //PF_BGCOLOR(0x0E0);
 			//paused = update_pause();
 		} else {
 			// Pressing start opens the item menu (unless a script is running)
@@ -127,8 +130,8 @@ void game_main(uint8_t load) {
 				// This unloads the stage's script and loads the "ArmsItem" script in its place
 				//tsc_load_stage(255);
 				//draw_itemmenu(TRUE);
-					player.x = (long long)((10LL*16LL) << CSF);
-					player.y = (long long)((8LL*16LL) << CSF);
+					player.x = (int32_t)((10LL*16LL) << CSF);
+					player.y = (int32_t)((8LL*16LL) << CSF);
 					player.x_next = player.x;
 					player.y_next = player.y;
 				//paused = TRUE;
@@ -174,17 +177,17 @@ void game_main(uint8_t load) {
 				vdp_set_display(TRUE);
 			} else {
 				// HUD on top
-                PF_BGCOLOR(0x00E);
+                //PF_BGCOLOR(0x00E);
 				//hud_update();
 				// Boss health, camera
-                PF_BGCOLOR(0x0EE);
+                //PF_BGCOLOR(0x0EE);
 				if(!gameFrozen) {
 					//if(showingBossHealth) tsc_update_boss_health();
 					camera_update();
-					//iprintf("\x1b[1;1HX:%08llX Y:%08llX\nSX:%04d SY:%04d", 	(unsigned long long)camera.x, (unsigned long long)camera.y, (int)camera.x_shifted, (int)camera.y_shifted);
+					//iprintf("\x1b[1;1HX:%08llX Y:%08llX\nSX:%04d SY:%04d", 	(unsigned int32_t)camera.x, (unsigned int32_t)camera.y, (int)camera.x_shifted, (int)camera.y_shifted);
 				}
 				// Run the next set of commands in a script if it is running
-                PF_BGCOLOR(0x0E0);
+                //PF_BGCOLOR(0x0E0);
 				//uint8_t rtn = tsc_update();
 				u8 rtn = 0;
 				// Nonzero return values exit the game, or switch to the ending sequence
@@ -210,15 +213,15 @@ void game_main(uint8_t load) {
 						break;
 					}
 				}
-                PF_BGCOLOR(0xEE0);
+                //PF_BGCOLOR(0xEE0);
 				//window_update();
 				// Handle controller locking
 				uint16_t lockstate = joystate, oldlockstate = oldstate;
 				if(controlsLocked) joystate = oldstate = 0;
 				// Don't update this stuff if a script is using <PRI
-                PF_BGCOLOR(0xE00);
+                //PF_BGCOLOR(0xE00);
 				//effects_update();
-                PF_BGCOLOR(0xE0E);
+                //PF_BGCOLOR(0xE0E);
 				if(!gameFrozen) {
 					//GBATODO
 					player_update();
@@ -234,14 +237,15 @@ void game_main(uint8_t load) {
 				//stage_draw_background();
 			}
 		}
-		PF_BGCOLOR(0xEEE);
+		//PF_BGCOLOR(0xEEE);
 		//system_update();
 		//ready = TRUE;
-		PF_BGCOLOR(0x000);
+		//PF_BGCOLOR(0x000);
 		spcProcess();
 		vdp_vsync();
 
-		dmaCopyVram(map_buffer_bg1, 0x6000, 4096);
+		// Map buffer is updated by stage_draw_screen() when needed, no need to copy every frame
+		//dmaCopyVram(map_buffer_bg1, 0x6000, 4096);
         //dmaCopyVram(map_buffer_bg2, 0x7000, 2048);
 		oamUpdate(); 
     	// 3. Increment our counter because we successfully finished one frame
@@ -249,6 +253,7 @@ void game_main(uint8_t load) {
 
     	// 4. Check if 60 VBlanks (approx 1 second for NTSC) have passed
     	// Use 50 instead of 60 if you are compiling for PAL
+    	uint16_t snes_vblank_count = vdp_get_vblank();
     	if (snes_vblank_count >= next_fps_check) {
     	    // Save the result
     	    current_fps = frames_drawn;
@@ -266,11 +271,11 @@ void game_main(uint8_t load) {
 		bgSetEnable(0);
 		stage_update();
 		joy_update();
-		PF_BGCOLOR(0x00E);
+		//PF_BGCOLOR(0x00E);
 
         u8 pad0 = padsCurrent(0);
-		if(pad0 & KEY_L) {stage_no--; stage_load(stage_no);}
-        if(pad0 & KEY_R) {stage_no++; stage_load(stage_no);}
+		//if(pad0 & KEY_L) {stage_no--; stage_load(stage_no);}
+        //if(pad0 & KEY_R) {stage_no++; stage_load(stage_no);}
 		//aftervsync();
 		
 	}

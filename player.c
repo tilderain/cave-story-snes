@@ -1,4 +1,5 @@
 #include "common.h"
+#include <string.h>
 
 #include "audio.h"
 #include "bank_data.h"
@@ -28,7 +29,7 @@
 
 
 
-#include <snes.h>
+#include "snes_regs_xc.h"
 #define PLAYER_SPRITE_TILES_QUEUE()
 //#define PLAYER_SPRITE_TILES_QUEUE() ({ \
 //	uint8_t f = player.frame + ((playerEquipment & EQUIP_MIMIMASK) ? 10 : 0); \
@@ -102,18 +103,15 @@ static void player_update_float();
 static void player_prev_weapon();
 static void player_next_weapon();
 
-u8 pal_mode = true;
-Entity *water_entity = NULL;
+extern u8 pal_mode; // Defined in game.c
+// water_entity is defined in entity.c, declared in entity.h
 
 void sound_play(uint8_t id, uint8_t priority)
 {
  
 }
 void effect_create_smoke(int16_t x, int16_t y){}
-int random()
-{
-	return 0;
-}
+// random() is defined in pvsneslib_compat.c, declared in common.h
 
 // Default values for player
 void player_init() {
@@ -847,7 +845,7 @@ void player_update_bullets() {
                         .y2 = (playerBullet[i].y >> CSF) + (playerBullet[i].hit_box.bottom),
                 };
             } else {
-                playerBullet[i].extent = (extent_box) {};
+                playerBullet[i].extent = (extent_box) {0};
             }
 		}
 	}
@@ -1177,8 +1175,7 @@ void player_unpause() {
 uint8_t player_invincible() {
 	return playerIFrames > 0 || tscState;
 }
-#define z80_request()
-#define z80_release()
+// z80_request and z80_release are defined in common.h
 uint8_t player_inflict_damage(uint16_t damage) {
 	// Show damage numbers
 	//effect_create_damage(-damage, &player, 0, 0);

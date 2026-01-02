@@ -1,10 +1,9 @@
 #include "common.h"
 //#include "memory.h"
+#include "snes_regs_xc.h"
+#include "joy.h"
 #include "system.h"
 #include "vdp.h"
-#include "joy.h"
-
-#include <snes.h>
 
 //#include "gba.h"
 
@@ -33,6 +32,48 @@ void joy_init() {
 	joystate = oldstate = 0;
 	return;
 
+}
+
+// Read pad state for port (0-1)
+// Returns 16-bit button state
+// SNES format: REG_JOY1L = axlr0000, REG_JOY1H = byetUDLR (active low)
+// We need to invert and map to match KEY_* constants
+uint16_t padsCurrent(uint8_t port) {
+    uint8_t joy_l, joy_h;
+    uint16_t result = 0;
+    
+    if(port == 0) {
+        joy_l = REG_JOY1L;  // axlr0000
+        joy_h = REG_JOY1H;  // byetUDLR
+    } else {
+        joy_l = REG_JOY2L;
+        joy_h = REG_JOY2H;
+    }
+    
+    // SNES buttons are active low, so invert
+    joy_l = ~joy_l;
+    joy_h = ~joy_h;
+    
+    // Map to KEY_* constants format
+    // Directional buttons from high byte (bits 0-3)
+    if(joy_h & JOY_RIGHT_MASK) result |= KEY_RIGHT;
+    if(joy_h & JOY_LEFT_MASK) result |= KEY_LEFT;
+    if(joy_h & JOY_DOWN_MASK) result |= KEY_DOWN;
+    if(joy_h & JOY_UP_MASK) result |= KEY_UP;
+    
+    // Action buttons from high byte (bits 4-7)
+    if(joy_h & JOY_START_MASK) result |= KEY_START;
+    if(joy_h & JOY_SELECT_MASK) result |= KEY_SELECT;
+    if(joy_h & JOY_Y_MASK) result |= KEY_Y;
+    if(joy_h & JOY_B_MASK) result |= KEY_B;
+    
+    // Shoulder buttons from low byte (bits 4-7)
+    if(joy_l & JOY_R_MASK) result |= KEY_R;
+    if(joy_l & JOY_L_MASK) result |= KEY_L;
+    if(joy_l & JOY_X_MASK) result |= KEY_X;
+    if(joy_l & JOY_A_MASK) result |= KEY_A;
+    
+    return result;
 }
 
 void joy_update() {

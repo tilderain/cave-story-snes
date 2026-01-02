@@ -1,3 +1,5 @@
+#include "snes_regs_xc.h"
+
 /*#define BUTTON_UP       0x0001
 #define BUTTON_DOWN     0x0002
 #define BUTTON_LEFT     0x0004
@@ -27,6 +29,21 @@
 #define BUTTON_DIR      0x000F
 #define BUTTON_BTN      0x0FF0
 
+// SNES button definitions (compatible with PVSneslib KEY_* constants)
+// These map to SNES joypad register bits
+#define KEY_RIGHT   JOY_RIGHT_MASK
+#define KEY_LEFT    JOY_LEFT_MASK
+#define KEY_DOWN    JOY_DOWN_MASK
+#define KEY_UP      JOY_UP_MASK
+#define KEY_START   JOY_START_MASK
+#define KEY_SELECT  JOY_SELECT_MASK
+#define KEY_Y       JOY_Y_MASK
+#define KEY_B       JOY_B_MASK
+#define KEY_X       JOY_X_MASK
+#define KEY_A       JOY_A_MASK
+#define KEY_L       JOY_L_MASK
+#define KEY_R       JOY_R_MASK
+
 #define JOY_TYPE_PAD3           0x00
 #define JOY_TYPE_PAD6           0x01
 
@@ -42,3 +59,4 @@ extern uint16_t joystate, oldstate;
 
 void joy_init();
 void joy_update();
+uint16_t padsCurrent(uint8_t port); // Read pad state for port (0-1) - returns 16-bit button state

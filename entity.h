@@ -1,6 +1,9 @@
 /*
  * Apart from effects and player bullets, all game objects are entities.
  */
+
+#include "common.h"
+#include "weapon.h"
  
 #define MD_STAYACTIVE	0x01
 #define MD_NOSLOPES		0x02
@@ -33,9 +36,9 @@ struct Entity {
 	uint8_t alwaysActive; // Guaranteed to never deactivate when TRUE
 	uint16_t state, timer, timer2; // AI script state and timers
 	/* Physics */
-	long long x, y; // Current position
-	long long x_next, y_next; // What position will be changed to next frame
-	long long x_mark, y_mark; // Marker value so the AI can remember a position later
+	int32_t x, y; // Current position
+	int32_t x_next, y_next; // What position will be changed to next frame
+	int32_t x_mark, y_mark; // Marker value so the AI can remember a position later
 	int16_t x_speed, y_speed; // Velocity
 	uint8_t dir, odir, // Direction entity is facing, 0=left, 1=right
 		grounded, // True when on the ground, enables jumping

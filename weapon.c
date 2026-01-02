@@ -22,7 +22,7 @@
 				 (!player.grounded && joy_down(BUTTON_DOWN)) ? DOWN : player.dir)
 
 
-uint16_t joystate, oldstate = 0;
+// oldstate is defined in joy.c, declared in joy.h
 uint8_t cfg_btn_jump = 5;
 uint8_t cfg_btn_shoot = 4;
 uint8_t cfg_btn_ffwd = 8;
@@ -118,8 +118,8 @@ static const MissileSettings missile_settings[2][6] = {
 	}
 };
 
-Weapon playerWeapon[MAX_WEAPONS] = {};
-Bullet playerBullet[MAX_BULLETS] = {};
+Weapon playerWeapon[MAX_WEAPONS] = {0};
+Bullet playerBullet[MAX_BULLETS] = {0};
 
 static void bullet_destroy_block(uint16_t x, uint16_t y);
 static void create_blade_slash(Bullet *b, uint8_t burst);
@@ -852,7 +852,7 @@ void bullet_update_machinegun(Bullet *b) {
 		b->ttl--;
 	}
 }
-int pal_mode = 0;
+extern u8 pal_mode; // Defined in game.c
 void bullet_update_missile(Bullet *b) {
 	b->ttl--;
 	uint8_t index = b->level - 1 + (b->type == WEAPON_SUPERMISSILE ? 3 : 0);

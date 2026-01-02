@@ -4,6 +4,8 @@
 		"cstdlib": "c",
 		"*.tcc": "c",
 		"memory": "c",
-		"new": "c"
+		"new": "c",
+		"snes_regs_xc.h": "c",
+		"data_converted.h": "c"
 	}
 }

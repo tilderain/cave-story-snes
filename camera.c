@@ -13,7 +13,6 @@
 //#include "gba_video.h"
 
 //#include "gba.h"
-#include "snes.h"
 
 //#include "gamemode.h"
 
@@ -35,9 +34,9 @@ uint16_t mapbuf[64];
 // Alternates between drawing row and column each frame when moving diagonally
 uint8_t diag_tick;
 
-long long camera_xmin, camera_ymin = 0;
-unsigned long long camera_xsize, camera_ysize = 0;
-u8 pal_mode = 0;
+int32_t camera_xmin, camera_ymin = 0;
+uint32_t camera_xsize, camera_ysize = 0;
+extern u8 pal_mode;
 cameraStruct camera = {0};
 
 void camera_init() {
@@ -50,7 +49,7 @@ void camera_init() {
 //uint8_t SCREEN_HALF_H = 224 / 2;
 //uint8_t SCREEN_HEIGHT = 224;
 
-void camera_set_position(long long x, long long y) {
+void camera_set_position(int32_t x, int32_t y) {
 	// Don't let the camera leave the stage
 	if(x > block_to_sub(stageWidth) - pixel_to_sub(SCREEN_HALF_W + 8))
 		x = block_to_sub(stageWidth) - pixel_to_sub(SCREEN_HALF_W + 8);
@@ -83,10 +82,10 @@ static inline void camera_update_player_offset() {
 		if(camera.x_offset > PAN_SIZE) camera.x_offset = PAN_SIZE;
 	}
 	
-	if(!controlsLocked && joy_down(KEY_UP)) {
+	if(!controlsLocked && joy_down(BUTTON_UP)) {
 		camera.y_offset -= PAN_SPEED;
 		if(camera.y_offset < -PAN_SIZE) camera.y_offset = -PAN_SIZE;
-	} else if(!controlsLocked && joy_down(KEY_DOWN)) {
+	} else if(!controlsLocked && joy_down(BUTTON_DOWN)) {
 		camera.y_offset += PAN_SPEED;
 		if(camera.y_offset > PAN_SIZE) camera.y_offset = PAN_SIZE;
 	} else {
@@ -98,7 +97,7 @@ static inline void camera_update_player_offset() {
 }
 
 // Calculate next camera position based on target
-static inline void camera_calculate_next_position(long long *x_next, long long *y_next) {
+static inline void camera_calculate_next_position(int32_t *x_next, int32_t *y_next) {
 	if(camera.target == &player) {
 		camera_update_player_offset();
 		*x_next = camera.x + (((floor(camera.target->x) + camera.x_offset) - camera.x) >> 4);
@@ -113,7 +112,7 @@ static inline void camera_calculate_next_position(long long *x_next, long long *
 }
 
 // Enforce maximum camera movement speed
-static inline void camera_clamp_speed(long long *x_next, long long *y_next) {
+static inline void camera_clamp_speed(int32_t *x_next, int32_t *y_next) {
 	if(*x_next - camera.x < -CAMERA_MAX_SPEED) *x_next = camera.x - CAMERA_MAX_SPEED;
 	if(*y_next - camera.y < -CAMERA_MAX_SPEED) *y_next = camera.y - CAMERA_MAX_SPEED;
 	if(*x_next - camera.x > CAMERA_MAX_SPEED) *x_next = camera.x + CAMERA_MAX_SPEED;
@@ -121,7 +120,7 @@ static inline void camera_clamp_speed(long long *x_next, long long *y_next) {
 }
 
 // Apply stage boundary constraints to camera position
-static inline void camera_apply_bounds(long long *x_next, long long *y_next) {
+static inline void camera_apply_bounds(int32_t *x_next, int32_t *y_next) {
 	uint16_t bounds = cameraShake ? 2 : 8;
 	
 	if(stageID == 18 && !pal_mode) { // Special case for shelter
@@ -143,7 +142,7 @@ static inline void camera_apply_bounds(long long *x_next, long long *y_next) {
 }
 
 // Apply camera shake effect
-static inline void camera_apply_shake(long long *x_next, long long *y_next) {
+static inline void camera_apply_shake(int32_t *x_next, int32_t *y_next) {
 	if(cameraShake && (--cameraShake & 1)) {
 		int16_t x_shake = (random() & 0x7FF) - 0x400;
 		int16_t y_shake = (random() & 0x7FF) - 0x400;
@@ -161,7 +160,7 @@ static inline void camera_update_culling() {
 }
 
 // Handle stage morphing (tile drawing) for camera movement
-static void camera_handle_morphing(long long *x_next, long long *y_next) {
+static void camera_handle_morphing(int32_t *x_next, int32_t *y_next) {
 	morphingColumn = sub_to_tile(*x_next) - sub_to_tile(camera.x);
 	morphingRow = sub_to_tile(*y_next) - sub_to_tile(camera.y);
 
@@ -219,7 +218,7 @@ void camera_update() {
 		return;
 	}
 	
-	long long x_next, y_next;
+	int32_t x_next, y_next;
 	
 	// Calculate next camera position
 	camera_calculate_next_position(&x_next, &y_next);

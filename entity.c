@@ -1,4 +1,8 @@
 #include "common.h"
+#include <string.h>
+#undef abs  // Undefine macro before including stdlib.h to avoid conflict
+#include <stdlib.h>
+#define abs(X) (((X) < 0)?-(X):(X))  // Redefine after stdlib.h
 #include "audio.h"
 #include "bank_data.h"
 #include "camera.h"
@@ -26,32 +30,32 @@
 
 /* Linked List Macros */
 
-#define LIST_PUSH(list, obj) ({                                                                \
+#define LIST_PUSH(list, obj) do {                                                             \
 	obj->next = list;                                                                          \
 	obj->prev = NULL;                                                                          \
-	list->prev = obj;                                                                          \
+	if(list) list->prev = obj;                                                                 \
 	list = obj;                                                                                \
-})
+} while(0)
 
-#define LIST_REMOVE(list, obj) ({                                                              \
+#define LIST_REMOVE(list, obj) do {                                                            \
 	if(obj->next) obj->next->prev = obj->prev;                                                 \
 	if(obj->prev) obj->prev->next = obj->next;                                                 \
 	else list = obj->next;                                                                     \
-})
+} while(0)
 
-#define LIST_MOVE(fromList, toList, obj) ({                                                    \
+#define LIST_MOVE(fromList, toList, obj) do {                                                  \
 	LIST_REMOVE(fromList, obj);                                                                \
 	LIST_PUSH(toList, obj);                                                                    \
-})
+} while(0)
 
-#define LIST_CLEAR(list) ({                                                                    \
+#define LIST_CLEAR(list) do {                                                                  \
 	Entity *temp;                                                                              \
 	while(list) {                                                                              \
 		temp = list;                                                                           \
 		LIST_REMOVE(list, list);                                                               \
 		free(temp);                                                                            \
 	}                                                                                          \
-})
+} while(0)
 
 // Heightmaps for slopes
 const uint8_t heightmap[4][16] = {
@@ -70,6 +74,9 @@ uint16_t entity_active_count = 0;
 uint8_t moveMeToFront = FALSE;
 
 Entity *entityList = NULL, *inactiveList = NULL, *bossEntity = NULL;
+
+// Stub for error_oom - use macro to avoid VBCC issues
+#define error_oom() do { /* Out of memory - stub */ } while(0)
 
 AnimationFrame* get_animation_frame(uint16_t type)
 {
@@ -909,7 +916,7 @@ void entities_clear_by_type(uint16_t type) {
 }
 
 void entity_drop_powerup(Entity *e) {
-	uint8_t chance = mod10[random() & 0x3FF] >> 1;
+	uint8_t chance = ((random() & 0x3FF) % 10) >> 1;
 	if(chance >= 2) { // Weapon Energy
 		if(e->experience > 0) {
 			Entity *exp = entity_create(e->x, e->y, OBJ_XP,
@@ -1053,7 +1060,7 @@ Entity *entity_create_ext(int32_t x, int32_t y, uint16_t type, uint16_t flags, u
 }
 
 void entities_replace(uint16_t event, uint16_t type, uint8_t direction, uint16_t flags) {
-    const static int flags_to_keep = (NPC_INTERACTIVE | NPC_EVENTONDEATH
+    static const int flags_to_keep = (NPC_INTERACTIVE | NPC_EVENTONDEATH
                                       | NPC_DISABLEONFLAG | NPC_ENABLEONFLAG | NPC_OPTION2);
 	Entity *e = entityList;
 	while(e) {

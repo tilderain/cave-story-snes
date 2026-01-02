@@ -151,19 +151,9 @@ extern uint8_t stageBackground;
 extern uint16_t backScrollTimer;
 extern uint8_t stageBackgroundType;
 
-static inline uint8_t stage_get_block(uint16_t x, uint16_t y) {
-	return stageBlocks[stageTable[y] + x];
-}
-
-static inline uint8_t stage_get_block_type(uint16_t x, uint16_t y) {
-	return stagePXA[stage_get_block(x, y)];
-}
-
-static inline uint8_t blk(int32_t xf, int16_t xoff, int32_t yf, int16_t yoff) {
-	uint16_t x = (xf >> CSF) + xoff;
-	uint16_t y = (yf >> CSF) + yoff;
-	return stage_get_block_type(x >> 4, y >> 4);
-}
+#define stage_get_block(x, y) (stageBlocks[stageTable[y] + x])
+#define stage_get_block_type(x, y) (stagePXA[stage_get_block(x, y)])
+#define blk(xf, xoff, yf, yoff) (stage_get_block_type((((xf) >> CSF) + (xoff)) >> 4, (((yf) >> CSF) + (yoff)) >> 4))
 
 // Clears previous stage and switches to one with the given ID
 void stage_load(uint16_t id);
@@ -178,4 +168,9 @@ void stage_update();
 void stage_setup_palettes();
 void stage_draw_screen();
 void stage_draw_background();
+void stage_draw_tile(uint16_t x, uint16_t y, const uint8_t* pxa);
+void stage_load_tileset(void);
+void stage_load_blocks(void);
+void stage_draw_screen_credits(void);
+void stage_draw_block(uint16_t x, uint16_t y);
 #endif

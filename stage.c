@@ -66,12 +66,7 @@ uint16_t stageWidth, stageHeight = 0;
  uint16_t backScrollTimer = 0;
  uint8_t stageBackgroundType = 0;
 
-static void stage_load_tileset();
-static void stage_load_blocks();
-
-static void stage_draw_block(uint16_t x, uint16_t y);
-//static void stage_draw_screen();
-static void stage_draw_screen_credits();
+// Function declarations moved to stage.h - removed static to match header
 void stage_draw_background();
 static void stage_draw_moonback();
 
@@ -93,7 +88,7 @@ uint16_t map_buffer_bg2[MAP_WIDTH * MAP_HEIGHT];
 // Format: vhopppcc cccccccc
 #define SNES_TILE_ENTRY(tile, palette, prio, hflip, vflip) \
     ((tile & 0x3FF) | ((palette & 7) << 10) | ((prio & 1) << 13) | ((hflip & 1) << 14) | ((vflip & 1) << 15))
-#include <snes.h>
+#include "snes_regs_xc.h"
 void test_draw_sequential() {
 
     // 1. Pre-calculate constant attributes to avoid shifting in the loop
@@ -147,7 +142,7 @@ void loadStageBackground(int index) {
     // for a full background. Adjust 0x2000 to match your actual .pic file size.
     uint16_t tileSize = 0x2000; 
     uint16_t palSize = 32; // 16 colors * 2 bytes
-    uint16_t vramAddr = 0x4000;
+    uint16_t vramAddr = 0x8000;
 	
     switch (index) {
         case 0: // BG_bk0
@@ -253,10 +248,10 @@ void stage_load(uint16_t id) {
 		vdp_set_backcolor(0); // Color index 0 for everything except fog
 		if(stageBackgroundType == 0 || stageBackgroundType == 3) { // Tiled image
 			vdp_set_scrollmode(HSCROLL_PLANE, VSCROLL_PLANE);
-			if(background_info[stageBackground].tileset != NULL)
+			if(background_info[stageBackground].tileset != 0)
 			{
 
-				vdp_tiles_load_from_rom(background_info[stageBackground].tileset, TILE_BACKINDEX, 
+				vdp_tiles_load_from_rom((volatile const uint32_t *)(uintptr_t)background_info[stageBackground].tileset, TILE_BACKINDEX, 
 						1024);
 				loadStageBackground(stageBackground);
 			}
@@ -273,7 +268,7 @@ void stage_load(uint16_t id) {
 			vdp_map_clear(VDP_PLAN_B);
             backScrollTable[0] = (SCREEN_HEIGHT >> 3) + 1;
 			//	gbatodo
-			vdp_tiles_load_from_rom(BG_Water, TILE_WATERINDEX, 64);
+			vdp_tiles_load_from_rom((volatile const uint32_t *)BG_Water, TILE_WATERINDEX, 64);
 		} else if(stageBackgroundType == 5) { // Fog
 			vdp_set_scrollmode(HSCROLL_TILE, VSCROLL_PLANE);
 			// Use background color from tileset
@@ -353,7 +348,7 @@ void stage_load_credits(uint8_t id) {
     enable_ints;
 }
 
-#include <snes.h>
+#include "snes_regs_xc.h"
 
 void stage_load_tileset() {
     uint32_t *buf = (uint32_t*) 0xFF0100;
@@ -535,12 +530,17 @@ void stage_replace_block(int16_t bx, int16_t by, uint8_t index) {
 	// Only redraw if change was made onscreen
 	stage_draw_block(bx, by);*/
 }
-u8 pal_mode = 0;
+extern u8 pal_mode; // Defined in game.c
 // Stage vblank drawing routine
 void stage_update() {
     //z80_request();
 	// Background Scrolling
 	// Type 2 is not included here, that's blank backgrounds which are not scrolled
+	
+	// Safety check: if stageBackgroundType is invalid, default to type 0
+	if(stageBackgroundType > 5) {
+		stageBackgroundType = 0;
+	}
 	
 	if(stageBackgroundType == 0) {
 		vdp_hscroll(VDP_PLAN_A, -sub_to_pixel(camera.x) + SCREEN_HALF_W);
@@ -690,7 +690,7 @@ void stage_setup_palettes() {
 	vdp_colors_next(48, stage_info[stageID].npcPalette->data, 16);*/
 }
 
-#include <snes.h>
+#include "snes_regs_xc.h"
 
 // Globals to track previous position
 // Initialize to a value that forces a full redraw on the first frame

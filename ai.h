@@ -36,21 +36,13 @@
 	}                                                                                          \
 }
 
-static inline void FACE_PLAYER(Entity *e) { e->dir = e->x < player.x; }
-static inline void TURN_AROUND(Entity *e) { e->dir ^= 1; }
+#define FACE_PLAYER(e) do { (e)->dir = (e)->x < player.x; } while(0)
+#define TURN_AROUND(e) do { (e)->dir ^= 1; } while(0)
 
-static inline uint8_t PLAYER_DIST_X(Entity *e, int32_t dist) {
-	return player.x > e->x - dist && player.x < e->x + dist;
-}
-static inline uint8_t PLAYER_DIST_Y(Entity *e, int32_t dist) {
-	return player.y > e->y - dist && player.y < e->y + dist;
-}
-static inline uint8_t PLAYER_DIST_X2(Entity *e, int32_t dist1, int32_t dist2) {
-	return player.x > e->x - dist1 && player.x < e->x + dist2;
-}
-static inline uint8_t PLAYER_DIST_Y2(Entity *e, int32_t dist1, int32_t dist2) {
-	return player.y > e->y - dist1 && player.y < e->y + dist2;
-}
+#define PLAYER_DIST_X(e, dist) (player.x > (e)->x - (dist) && player.x < (e)->x + (dist))
+#define PLAYER_DIST_Y(e, dist) (player.y > (e)->y - (dist) && player.y < (e)->y + (dist))
+#define PLAYER_DIST_X2(e, dist1, dist2) (player.x > (e)->x - (dist1) && player.x < (e)->x + (dist2))
+#define PLAYER_DIST_Y2(e, dist1, dist2) (player.y > (e)->y - (dist1) && player.y < (e)->y + (dist2))
 
 #define LIMIT_X(v) {                                                                           \
 	if(e->x_speed > (v)) e->x_speed = (v);                                                     \

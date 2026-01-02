@@ -1,7 +1,58 @@
-#pragma once
+#ifndef COMMON_H
+#define COMMON_H
 
+#include <stdint.h> 
+#include <stdbool.h>
+#include <stddef.h>
 
+#define FALSE   0
+#define TRUE    1
+
+// SGDK Compatibility typedefs
+typedef int8_t s8;
+typedef int16_t s16;
+typedef int32_t s32;
+
+typedef uint8_t u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+
+// PVSneslib to snesXC function compatibility stubs
+void consoleNocashMessage(const char *format, ...); // For iprintf
 #define iprintf consoleNocashMessage
+
+// PVSneslib constants
+#define BG_16COLORS 16
+#define BG_MODE1 1
+
+// Graphics functions (now implemented in vdp.c with SNES-native code)
+// These forward declarations allow code to use them without including vdp.h
+void dmaCopyVram(const void *src, uint16_t dest, uint16_t size);
+void bgSetEnable(uint8_t bg);
+void setMode(uint8_t mode, uint8_t bgSize);
+void bgInitTileSet(uint8_t bg, const void *tiles, const void *palette, uint16_t tileoffset, uint16_t tilesize, uint16_t palsize, uint16_t colors, uint16_t vramAddr);
+void setPaletteColor(uint8_t index, uint16_t color);
+int random(void);
+
+// Input functions (now implemented in joy.c)
+uint16_t padsCurrent(uint8_t port);
+
+// Stub functions for compatibility
+#ifndef z80_request
+#define z80_request() do {} while(0)
+#endif
+#ifndef z80_release
+#define z80_release() do {} while(0)
+#endif
+void sheets_load_stage(uint16_t id, uint8_t arg1, uint8_t arg2);
+void DMA_flushQueue(void);
+
+// Functions now implemented in vdp.c
+void spcProcess(void); // Process SPC700 audio
+void oamUpdate(void); // Update OAM
+void oamSet(uint8_t id, int16_t x, int16_t y, uint8_t priority, uint8_t hFlip, uint8_t vFlip, uint16_t gfxOffset, uint8_t paletteOffset); // Set OAM sprite
+void spcPlaySound(uint8_t sound); // Play sound via SPC700
+
 //GBATODO
 #define SYS_hardReset() //__asm__("move   #0x2700,%sr\n\t" \
                         //        "move.l (0),%a7\n\t"     \
@@ -12,29 +63,6 @@
 #define disable_ints // __asm__("move #0x2700,%sr")
 
 
-// bool and stdint types
-#define FALSE   0
-#define TRUE    1
-#define NULL    0
-
-typedef signed char		int8_t;
-typedef signed short	int16_t;
-typedef signed long long		int32_t;
-
-typedef unsigned char	uint8_t;
-typedef unsigned short	uint16_t;
-typedef unsigned long long	uint32_t;
-
-// SGDK Compatibility
-
-typedef int8_t s8;
-typedef int16_t s16;
-typedef int32_t s32;
-
-typedef uint8_t u8;
-typedef uint16_t u16;
-typedef uint32_t u32;
-
 //#define PROFILE_BG
 #ifdef PROFILE_BG
 #define PF_BGCOLOR(c) ({ \
@@ -42,7 +70,7 @@ typedef uint32_t u32;
     *((volatile uint16_t*) 0xC00000) = c; \
 })
 #else
-#define PF_BGCOLOR(c) ({})
+#define PF_BGCOLOR(c) do {} while(0)
 #endif
 
 // Screen size
@@ -50,7 +78,7 @@ typedef uint32_t u32;
 #define SCREEN_HALF_W SCREEN_WIDTH / 2
 
 // On PAL the screen height is 16 pixels more, so these can't be constants
-//extern uint8_t SCREEN_HEIGHT;
+#define SCREEN_HEIGHT 224
 #define SCREEN_HALF_H 224 / 2
 //extern uint8_t FPS;
 
@@ -136,19 +164,19 @@ extern const int16_t cos2[0x100];
 // pixel - single dot on screen (1x1)
 // tile - genesis VDP tile (8x8)
 // block - Cave Story tile (16x16)
-#define sub_to_pixel(x)   (((long long)(x))>>9)
+#define sub_to_pixel(x)   (((int32_t)(x))>>9)
 #define sub_to_tile(x)    ((x)>>12)
 #define sub_to_block(x)   ((x)>>13)
 
-#define pixel_to_sub(x)   (((long long)(x))<<9)
+#define pixel_to_sub(x)   (((int32_t)(x))<<9)
 #define pixel_to_tile(x)  ((x)>>3)
 #define pixel_to_block(x) ((x)>>4)
 
-#define tile_to_sub(x)    (((long long)(x))<<12)
+#define tile_to_sub(x)    (((int32_t)(x))<<12)
 #define tile_to_pixel(x)  ((x)<<3)
 #define tile_to_block(x)  ((x)>>1)
 
-#define block_to_sub(x)   (((long long)(x))<<13)
+#define block_to_sub(x)   (((int32_t)(x))<<13)
 #define block_to_pixel(x) ((x)<<4)
 #define block_to_tile(x)  ((x)<<1)
 
@@ -270,3 +298,5 @@ extern volatile uint8_t vblank;
 extern volatile uint8_t ready;
 
 void aftervsync();
+
+#endif // COMMON_H
