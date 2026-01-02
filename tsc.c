@@ -1,5 +1,5 @@
 #include "tsc.h"
-
+uint8_t tscState = 0;
 // TSC (Text Script Commands) stubs - these are declared in tsc.h
 // TODO: Implement proper TSC script system
 

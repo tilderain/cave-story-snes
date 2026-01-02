@@ -69,11 +69,11 @@ ifeq ($(COMPILER_LOWER),vbcc65816)
 	AS = $(VBCC)/bin/vasm65816_oldstyle
 	LD = $(VBCC)/bin/vlink
 	
-	CCFLAGS = +snes-hi -lm -maxoptpasses=300 -O4 -inline-depth=1000 -unroll-all -fp-associative -force-statics -range-opt -I"$(SHARED_SRC_DIR)" -I"lib" -I"include" -I"elua-0.9/inc" -I"elua-0.9/inc/snes" -I"elua-0.9/src/lua" -I"elua-0.9/inc/newlib" -D__VBCC__=1 -DLUA_CROSS_COMPILER -D__VBCC65816__ -c
+	CCFLAGS = +snes-hi -lm -maxoptpasses=300 -O3 -inline-depth=1000 -unroll-all -fp-associative -force-statics -range-opt -I"$(SHARED_SRC_DIR)" -I"lib" -I"include" -I"elua-0.9/inc" -I"elua-0.9/inc/snes" -I"elua-0.9/src/lua" -I"elua-0.9/inc/newlib" -D__VBCC__=1 -DLUA_CROSS_COMPILER -D__VBCC65816__ -c
 	ASFLAGS = -816 -quiet -nowarn=62 -opt-branch -ldots -Fvobj
 	
 	# Note: Includes --DROMSIZE=0x400000 to fix the memory overflow
-	LDFLAGS = +snes-hi -lm -maxoptpasses=300 -O4 -inline-depth=1000 -unroll-all -fp-associative -force-statics -range-opt -I"$(SHARED_SRC_DIR)" -I"lib" -I"include" -I"elua-0.9/inc" -I"elua-0.9/inc/snes" -I"elua-0.9/src/lua" -I"elua-0.9/inc/newlib" -D__VBCC__=1 -DLUA_CROSS_COMPILER -D__VBCC65816__ --DROMSIZE=0x400000
+	LDFLAGS = +snes-hi -lm -maxoptpasses=300 -O3 -inline-depth=1000 -unroll-all -fp-associative -force-statics -range-opt -I"$(SHARED_SRC_DIR)" -I"lib" -I"include" -I"elua-0.9/inc" -I"elua-0.9/inc/snes" -I"elua-0.9/src/lua" -I"elua-0.9/inc/newlib" -D__VBCC__=1 -DLUA_CROSS_COMPILER -D__VBCC65816__ --DROMSIZE=0x400000
 	
 	INCLUDES = 
 	OUTPUT_EXT = .smc
@@ -331,7 +331,7 @@ ifeq ($(COMPILER_LOWER),vbcc65816)
 	@echo "Linking object files with vbcc..."
 	@echo "OBJECTS variable: $(OBJECTS)"
 	@echo "Compiling and linking all sources together..."
-	$(CC) $(LDFLAGS) $(C_SOURCES) -o $(BUILD_DIR)/mainBankZero_vbcc65816$(OUTPUT_EXT)
+	$(CC) $(LDFLAGS) $(OBJECTS) -o $(BUILD_DIR)/mainBankZero_vbcc65816$(OUTPUT_EXT)
 	@echo "Compilation completed successfully"
 	$(POST_LINK)
 else

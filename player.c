@@ -1022,13 +1022,14 @@ static void player_update_booster() {
 }
 
 static uint16_t GetNextChar(uint8_t index) {
+	/*
 	const uint8_t *names = (const uint8_t*)STAGE_NAMES;
 	uint16_t chr = names[stageID * 16 + index];
 	if(chr >= 0xE0 && chr < 0xFF) {
 		return (chr - 0xE0) * 0x60 + (names[stageID * 16 + index + 1] - 0x20) + 0x100;
 	} else {
 		return chr;
-	}
+	}*/
 }
 
 static void show_map_jname(uint8_t ttl) {
@@ -1045,7 +1046,7 @@ static void show_map_jname(uint8_t ttl) {
         if(chr1 > 0xFF) i++;
         chr2 = GetNextChar(i++);
         if (chr2 > 0xFF) i++;
-        cjk_drawsprite(mul6[mapNameSpriteNum], chr1, chr2);
+        //cjk_drawsprite(mul6[mapNameSpriteNum], chr1, chr2);
         len += chr2 ? 2 : 1;
         mapNameSpriteNum++;
     }

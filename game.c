@@ -18,7 +18,7 @@
 #include "system.h"
 #include "tables.h"
 //#include "tools.h"
-//#include "tsc.h"
+#include "tsc.h"
 #include "vdp.h"
 #include "weapon.h"
 //#include "window.h"
@@ -78,7 +78,7 @@ void game_reset(uint8_t load) {
 	//vdp_colors_next(16, PAL_Sym.data, 16);
 	//vdp_colors(0, PAL_FadeOut, 64);*/
 }
-u8 tscState = 0;
+
 u8 pal_mode = 0;
 // joytype is defined in joy.c, declared in joy.h
    		u8 stage_no = 14;
@@ -280,3 +280,4 @@ void game_main(uint8_t load) {
 		
 	}
 }
+
