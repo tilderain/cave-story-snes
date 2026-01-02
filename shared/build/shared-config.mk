@@ -64,21 +64,35 @@ export PATH := $(PATH):$(VBCC)/bin
 
 # VBCC65816 Configuration
 ifeq ($(COMPILER_LOWER),vbcc65816)
-	# 3. Use $(VBCC) for tool paths
-	CC = $(VBCC)/bin/vc
-	AS = $(VBCC)/bin/vasm65816_oldstyle
-	LD = $(VBCC)/bin/vlink
-	
-	CCFLAGS = +snes-hi -lm -maxoptpasses=300 -O3 -inline-depth=1000 -unroll-all -fp-associative -force-statics -range-opt -I"$(SHARED_SRC_DIR)" -I"lib" -I"include" -I"elua-0.9/inc" -I"elua-0.9/inc/snes" -I"elua-0.9/src/lua" -I"elua-0.9/inc/newlib" -D__VBCC__=1 -DLUA_CROSS_COMPILER -D__VBCC65816__ -c
-	ASFLAGS = -816 -quiet -nowarn=62 -opt-branch -ldots -Fvobj
-	
-	# Note: Includes --DROMSIZE=0x400000 to fix the memory overflow
-	LDFLAGS = +snes-hi -lm -maxoptpasses=300 -O3 -inline-depth=1000 -unroll-all -fp-associative -force-statics -range-opt -I"$(SHARED_SRC_DIR)" -I"lib" -I"include" -I"elua-0.9/inc" -I"elua-0.9/inc/snes" -I"elua-0.9/src/lua" -I"elua-0.9/inc/newlib" -D__VBCC__=1 -DLUA_CROSS_COMPILER -D__VBCC65816__ --DROMSIZE=0x400000
-	
-	INCLUDES = 
-	OUTPUT_EXT = .smc
-	POST_LINK = 
-	COMPILER_NAME = vbcc65816
+    # 1. Standard tools
+    CC = $(VBCC)/bin/vc
+    AS = $(VBCC)/bin/vasm65816_oldstyle
+    
+    # 2. Point LD directly to vlink (bypass vc for linking)
+    LD = $(VBCC)/bin/vlink
+    
+    # 3. Compiler Flags (Compilation only)
+    CCFLAGS = +snes-hi -lm -maxoptpasses=300 -O3 -inline-depth=1000 -unroll-all -fp-associative -force-statics -range-opt -I"$(SHARED_SRC_DIR)" -I"lib" -I"include" -I"elua-0.9/inc" -I"elua-0.9/inc/snes" -I"elua-0.9/src/lua" -I"elua-0.9/inc/newlib" -D__VBCC__=1 -DLUA_CROSS_COMPILER -D__VBCC65816__ -c
+    ASFLAGS = -816 -quiet -nowarn=62 -opt-branch -ldots -Fvobj
+    
+    # 4. Linker Flags (Direct vlink arguments)
+    # We explicitly include the startup.o, standard libs, and ROM size here
+    LDFLAGS = -b rawbin1 -nowarn=22 -Cvbcc \
+              -T$(VBCC)/targets/65816-snes/vlink-hi.cmd \
+              -L$(VBCC)/targets/65816-snes/lib \
+              $(VBCC)/targets/65816-snes/lib/startup.o \
+              -DROMSIZE=0x400000 \
+              -symfile $(BUILD_DIR)/mainBankZero_vbcc65816.sym \
+              -M$(BUILD_DIR)/mainBankZero_vbcc65816.map
+    
+    INCLUDES = 
+    OUTPUT_EXT = .smc
+    # This script checks if the file exists, then replaces all colons with spaces
+    POST_LINK = if [ -f $(BUILD_DIR)/mainBankZero_vbcc65816.sym ]; then \
+                    sed -i -e 's/:/ /g' -e 's/0x//g' $(BUILD_DIR)/mainBankZero_vbcc65816.sym; \
+                    echo "Processed $(BUILD_DIR)/mainBankZero_vbcc65816.sym"; \
+                fi
+    COMPILER_NAME = vbcc65816
 endif
   
 # Calypsi Configuration
@@ -331,7 +345,7 @@ ifeq ($(COMPILER_LOWER),vbcc65816)
 	@echo "Linking object files with vbcc..."
 	@echo "OBJECTS variable: $(OBJECTS)"
 	@echo "Compiling and linking all sources together..."
-	$(CC) $(LDFLAGS) $(OBJECTS) -o $(BUILD_DIR)/mainBankZero_vbcc65816$(OUTPUT_EXT)
+	$(LD) $(LDFLAGS) $(OBJECTS) -lvc -lm  -o $(BUILD_DIR)/mainBankZero_vbcc65816$(OUTPUT_EXT)
 	@echo "Compilation completed successfully"
 	$(POST_LINK)
 else
