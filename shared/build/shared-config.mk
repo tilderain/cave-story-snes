@@ -94,7 +94,42 @@ ifeq ($(COMPILER_LOWER),vbcc65816)
                 fi
     COMPILER_NAME = vbcc65816
 endif
-  
+
+# 1. NEW: VBCC Classic Configuration (Supports -O4)
+ifeq ($(COMPILER_LOWER),vbcc_classic)
+    CC = $(VBCC)/bin/vc
+    AS = $(VBCC)/bin/vasm65816_oldstyle
+    # In classic mode, we use vc as the linker to handle LTO (-O4)
+    LD = $(VBCC)/bin/vc
+    
+    # Enable -O4 for whole-program optimization
+    CCFLAGS = +snes-hi -lm -maxoptpasses=300 -O4 -inline-depth=1000 -unroll-all -fp-associative -force-statics -range-opt -I"$(SHARED_SRC_DIR)" -I"lib" -I"include" -I"elua-0.9/inc" -I"elua-0.9/inc/snes" -I"elua-0.9/src/lua" -I"elua-0.9/inc/newlib" -D__VBCC__=1 -DLUA_CROSS_COMPILER -D__VBCC65816__ -c
+    ASFLAGS = -816 -quiet -nowarn=62 -opt-branch -ldots -Fvobj
+    
+    # Linker Flags:
+    # 1. We use --M to generate a map file. The 'vc' driver strips one '-' and passes it to vlink.
+    # 2. We avoid -symfile here because the 'vc' driver reorders paths with spaces, breaking the link.
+    # 3. --DROMSIZE is passed through to the linker script.
+    LDFLAGS = +snes-hi -lm -maxoptpasses=300 -O3 -inline-depth=1000 -unroll-all -fp-associative -force-statics -range-opt \
+              -I"$(SHARED_SRC_DIR)" -I"lib" -I"include" -I"elua-0.9/inc" -I"elua-0.9/inc/snes" -I"elua-0.9/src/lua" -I"elua-0.9/inc/newlib" \
+              -D__VBCC__=1 -DLUA_CROSS_COMPILER -D__VBCC65816__ \
+              --M$(BUILD_DIR)/mainBankZero_vbcc65816.map \
+              --DROMSIZE=0x400000
+    
+    OUTPUT_EXT = .smc
+    
+    # Post-link Logic:
+    # 1. Check if the Map file exists.
+    # 2. Extract lines containing "0x" (the symbols).
+    # 3. Use awk to take the Address ($1) and Symbol Name ($2).
+    # 4. Strip the "0x" prefix to match your required .sym format.
+    POST_LINK = if [ -f $(BUILD_DIR)/mainBankZero_vbcc65816.map ]; then \
+                    grep "0x" $(BUILD_DIR)/mainBankZero_vbcc65816.map | grep -v "ROM" | awk '{print $$1 " " $$2}' | sed 's/0x//g' > $(BUILD_DIR)/mainBankZero_vbcc65816.sym; \
+                    echo "Generated $(BUILD_DIR)/mainBankZero_vbcc65816.sym from Map file"; \
+                fi
+                
+    COMPILER_NAME = vbcc_classic
+endif
 # Calypsi Configuration
 ifeq ($(COMPILER_LOWER),calypsi)
 	CC = $(CALYPSI_PATH)/cc65816
@@ -234,7 +269,7 @@ ifeq ($(COMPILER_LOWER),wdc816cc)
 endif
 
 # VBCC65816 Source Configuration
-ifeq ($(COMPILER_LOWER),vbcc65816)
+ifneq ($(filter vbcc65816 vbcc_classic,$(COMPILER_LOWER)),)
 	PROJECT_C_FILES = $(wildcard *.c)
 	C_SOURCES = $(PROJECT_C_FILES) $(SHARED_SRC_DIR)/initsnes.c
 	ASM_SOURCES = 
@@ -339,6 +374,12 @@ ifeq ($(COMPILER_LOWER),tcc816)
 	$(CC) $(CCFLAGS) $(INCLUDES) $(C_SOURCES)
 	$(POST_LINK)
 else
+ifeq ($(COMPILER_LOWER),vbcc_classic)
+	@echo "Compiling with VBCC Classic (-O4 LTO enabled)..."
+	@$(MAKE) $(OBJECTS)
+	$(LD) $(LDFLAGS) $(OBJECTS) -o $(BUILD_DIR)/mainBankZero_vbcc65816$(OUTPUT_EXT)
+	$(POST_LINK)
+else
 ifeq ($(COMPILER_LOWER),vbcc65816)
 	@echo "Compiling with VBCC65816 (incremental compilation)..."
 	@$(MAKE) $(OBJECTS)
@@ -390,11 +431,11 @@ $(BUILD_DIR)/%.o: %.c
 endif
 
 # VBCC65816 specific rules
-ifeq ($(COMPILER_LOWER),vbcc65816)
+ifneq ($(filter vbcc65816 vbcc_classic,$(COMPILER_LOWER)),)
 $(BUILD_DIR)/%.o: %.c
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CCFLAGS) $(INCLUDES) -o $@ $<
-
+endif
 $(BUILD_DIR)/%.o: %.s
 	@mkdir -p $(BUILD_DIR)
 	$(AS) $(ASFLAGS) -o $@ $<
