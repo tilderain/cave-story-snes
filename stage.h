@@ -151,7 +151,9 @@ extern uint8_t stageBackground;
 extern uint16_t backScrollTimer;
 extern uint8_t stageBackgroundType;
 
-#define stage_get_block(x, y) (stageBlocks[stageTable[y] + x])
+static inline stage_get_block(uint16_t x, uint16_t y) {
+    return stageBlocks[stageTable[y] + x];
+}
 #define stage_get_block_type(x, y) (stagePXA[stage_get_block(x, y)])
 #define blk(xf, xoff, yf, yoff) (stage_get_block_type((((xf) >> CSF) + (xoff)) >> 4, (((yf) >> CSF) + (yoff)) >> 4))
 
