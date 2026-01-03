@@ -127,19 +127,8 @@ def get_gfxconv_params(filename, source_file, is_wrapper=True):
         # Use -gs8 -mn16 -p for stage graphics, let gfx2snes handle bit depth
         return ['-gs8', '-mn16', '-p'] + file_type_flag + ['-m', '-mR!']
 
-
 def convert_png_to_snes_tiles(source_png_path, output_pic_path, output_pal_path=None, max_colors=16):
-    """Convert PNG image directly to SNES 4bpp tile format (.pic) and palette (.pal).
-    
-    SNES 4bpp tile format:
-    - Each 8x8 tile is 32 bytes
-    - 4 bitplanes: b0, b1, b2, b3
-    - Format: b0[0-7], b1[0-7], b2[0-7], b3[0-7] (8 bytes per bitplane per tile)
-    
-    Palette format:
-    - 16 colors * 2 bytes = 32 bytes
-    - Each color is 15-bit BGR format: -bbb-bbgg-gggr-rrrr
-    """
+    """Convert PNG image directly to SNES 4bpp tile format (.pic) and palette (.pal)."""
     if not HAS_PIL:
         return False, "PIL/Pillow not available"
     
@@ -195,9 +184,21 @@ def convert_png_to_snes_tiles(source_png_path, output_pic_path, output_pal_path=
                             bit = (pixel >> bp) & 1
                             bitplanes[bp][y] |= (bit << (7 - x))
                 
-                # Write bitplanes in order: b0, b1, b2, b3
-                for bp in range(4):
-                    tile_data.extend(bitplanes[bp])
+                # --- FIX START ---
+                # SNES 4bpp Format is interleaved:
+                # Bytes 0-15:  Bitplane 0 and 1 interleaved by row
+                # Bytes 16-31: Bitplane 2 and 3 interleaved by row
+                
+                # Write Bitplanes 0 and 1
+                for y in range(8):
+                    tile_data.append(bitplanes[0][y])
+                    tile_data.append(bitplanes[1][y])
+                
+                # Write Bitplanes 2 and 3
+                for y in range(8):
+                    tile_data.append(bitplanes[2][y])
+                    tile_data.append(bitplanes[3][y])
+                # --- FIX END ---
         
         # Write .pic file
         with open(output_pic_path, 'wb') as f:
@@ -300,8 +301,8 @@ def generate_intermediate_file(filepath, base_dir):
         full_path = filepath
     full_path = os.path.normpath(full_path)
     
-    if os.path.exists(full_path):
-        return  # File already exists, no need to generate
+    #if os.path.exists(full_path):
+    #    return  # File already exists, no need to generate
     
     # Also check if .pic/.pal file exists in same directory as source PNG/BMP
     # (sometimes they're generated alongside the source files)
@@ -809,27 +810,60 @@ def convert_asm_to_c(asm_file_path, output_file_path=None, base_dir=None):
 
 def main():
     """Main entry point."""
-    # Hardcoded input file path (relative to script location)
     script_dir = os.path.dirname(os.path.abspath(__file__))
     asm_file = os.path.join(script_dir, "data.asmr")
     
+    print(f"--- Debug Info ---")
+    print(f"Script location: {script_dir}")
+    print(f"Looking for input: {asm_file}")
+    
+    # 1. Check if ASM file exists
+    if not os.path.exists(asm_file):
+        print(f"ERROR: data.asmr not found at {asm_file}")
+        print("Please ensure data.asmr is in the same folder as this script.")
+        sys.exit(1)
+    else:
+        print(f"Found data.asmr")
+
+    # 2. Check for PIL/Pillow
+    if HAS_PIL:
+        print("PIL (Pillow) detected: Image conversion enabled.")
+    else:
+        print("WARNING: PIL not detected. Install with 'pip install Pillow'.")
+        print("         Without PIL, .png files will NOT be converted unless gfxconv is found.")
+
+    # 3. Check Regex Parsing
     # Optional output file and base directory from command line
     output_file = sys.argv[1] if len(sys.argv) > 1 else None
     base_dir = sys.argv[2] if len(sys.argv) > 2 else None
     
-    # Default output file to data_converted.h in script directory
     if output_file is None:
         output_file = os.path.join(script_dir, "data_converted.h")
-    
-    # Default base_dir to project root (parent of TempOld)
     if base_dir is None:
         base_dir = os.path.dirname(script_dir) or '.'
+
+    print(f"Output target: {output_file}")
     
-    if not os.path.exists(asm_file):
-        print(f"Error: Input file not found: {asm_file}", file=sys.stderr)
+    # Run the parsing logic manually to debug count
+    entries = parse_asm_file(asm_file, base_dir)
+    print(f"Entries found in ASM file: {len(entries)}")
+    
+    if len(entries) == 0:
+        print("ERROR: No entries found. Check your data.asmr formatting.")
+        print("Expected formats:")
+        print('  BIN symbol_name "file.bin"')
+        print('  label: .incbin "file.bin"')
+        print('  .incbin "file.bin"')
         sys.exit(1)
-    
+
+    # Proceed with conversion
+    print("Starting conversion...")
     convert_asm_to_c(asm_file, output_file, base_dir)
+    print("Done.")
+
+
+if __name__ == '__main__':
+    main()
 
 
 if __name__ == '__main__':
