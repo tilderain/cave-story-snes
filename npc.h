@@ -395,7 +395,7 @@
 #define OBJ_DROPLET_SPAWNER			359		// spawns small falling water drips from e.g. resevoir
 #define OBJ_THANK_YOU				360		// credits
 
-// Then the bosses (360 + BOSS_???), boss enum is in entity.h
+// Then the bosses (360 + BOSS_?), boss enum is in entity.h
 
 // NXEngine goes wild with the IDs after this point,
 // but here IDs are array indices so I do my own thing

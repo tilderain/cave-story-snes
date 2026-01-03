@@ -111,13 +111,13 @@
 // Remember the pal mode flag so we don't have to read the control port every time
 //extern uint8_t pal_mode;
 
-typedef unsigned char	uint8_t;
-typedef unsigned short	uint16_t;
-typedef unsigned int	uint32_t;
+//typedef unsigned char	uint8_t;
+//typedef unsigned short	uint16_t;
+//typedef unsigned int	uint32_t;
 
-typedef signed char	int8_t;
-typedef signed short	int16_t;
-typedef signed int	int32_t;
+//typedef signed char	int8_t;
+//typedef signed short	int16_t;
+//typedef signed int	int32_t;
 // Set defaults, clear everything
 void vdp_init();
 // Wait until next vblank
@@ -198,7 +198,7 @@ void dmaCopyVram(const void *src, uint16_t dest, uint16_t size);
 void setPaletteColor(uint8_t index, uint16_t color);
 void setMode(uint8_t mode, uint8_t bgSize);
 void bgSetEnable(uint8_t bg);
-void bgInitTileSet(uint8_t bg, const void *tiles, const void *palette, uint16_t tileoffset, uint16_t tilesize, uint16_t palsize, uint16_t colors, uint16_t vramAddr);
+//void bgInitTileSet(uint8_t bg, const void *tiles, const void *palette, uint16_t tileoffset, uint16_t tilesize, uint16_t palsize, uint16_t colors, uint16_t vramAddr);
 int random(void);
 
 // OAM functions

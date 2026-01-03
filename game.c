@@ -92,7 +92,7 @@ void game_main(uint8_t load) {
 	
 	// Enable NMI (VBlank) interrupts so vdp_vsync() works
 	// Bit 7 (0x80) enables NMI interrupts
-	REG_NMITIMEN = 0x80;
+	REG_NMITIMEN = 0x81;
 
 	//vdp_colors(0, PAL_FadeOut, 64);
 	//vdp_color(15, 0x000);
@@ -245,8 +245,8 @@ void game_main(uint8_t load) {
 		vdp_vsync();
 
 		// Map buffer is updated by stage_draw_screen() when needed, no need to copy every frame
-		//dmaCopyVram(map_buffer_bg1, 0x6000, 4096);
-        //dmaCopyVram(map_buffer_bg2, 0x7000, 2048);
+		dmaCopyVram(map_buffer_bg1, 0x6000, 4096);
+        dmaCopyVram(map_buffer_bg2, 0x7000, 2048);
 		oamUpdate(); 
     	// 3. Increment our counter because we successfully finished one frame
     	frames_drawn++;
@@ -273,9 +273,9 @@ void game_main(uint8_t load) {
 		joy_update();
 		//PF_BGCOLOR(0x00E);
 
-        u8 pad0 = padsCurrent(0);
+    	//u8 pad0 = padsCurrent(0);
 		//if(pad0 & KEY_L) {stage_no--; stage_load(stage_no);}
-        //if(pad0 & KEY_R) {stage_no++; stage_load(stage_no);}
+    	//if(pad0 & KEY_R) {stage_no++; stage_load(stage_no);}
 		//aftervsync();
 		
 	}

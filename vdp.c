@@ -148,7 +148,9 @@ void dmaCopyVram(const void *src, uint16_t dest, uint16_t size) {
         vram_log_count++;
     }
     // Use snesXC LoadVram function for direct DMA transfer
-    LoadVram((const unsigned char *)src, dest, size);
+
+    uint16_t byteAddr = dest << 1;
+    LoadVram((const unsigned char *)src, byteAddr, size);
 }
 
 // Flush DMA queue - SNES native implementation (stub)
@@ -390,6 +392,7 @@ static void minimal_vsprintf(char *buf, const char *format, va_list ap) {
 
 // Console message function - writes formatted message to no$sns debug register
 void consoleNocashMessage(const char *format, ...) {
+    return;
     char text_buffer[64];
     va_list ap;
     
@@ -484,14 +487,14 @@ void bgSetEnable(uint8_t bg) {
 // palsize: size of palette data in bytes
 // colors: number of colors (typically 16 for 4bpp)
 // vramAddr: VRAM address for tile data (word address)
-void bgInitTileSet(uint8_t bg, const void *tiles, const void *palette, 
+/*void bgInitTileSet(uint8_t bg, const void *tiles, const void *palette, 
                    uint16_t tileoffset, uint16_t tilesize, uint16_t palsize, 
                    uint16_t colors, uint16_t vramAddr) {
     // Load tiles to VRAM
     // LoadVram expects a byte address and divides by 2 internally to convert to word address
     // vramAddr is a word address, so we multiply by 2 to convert to byte address
     if(tiles && tilesize > 0) {
-        uint16_t byteAddr = vramAddr << 1;
+        //uint16_t byteAddr = vramAddr << 1;
         // Log only the first 20 VRAM writes
         if (vram_log_count < 20) {
             // Log the LoadVram call (24-bit pointer: bank + offset)
@@ -502,7 +505,7 @@ void bgInitTileSet(uint8_t bg, const void *tiles, const void *palette,
             char bank_str[3], offset_str[5], dest_str[5];
             uint_to_str(bank_str, bank, 16);
             uint_to_str(offset_str, offset, 16);
-            uint_to_str(dest_str, byteAddr, 16);
+            uint_to_str(dest_str, vramAddr, 16);
             char bank_padded[3], offset_padded[5], dest_padded[5];
             pad_hex_str(bank_padded, bank_str, 2);
             pad_hex_str(offset_padded, offset_str, 4);
@@ -511,7 +514,7 @@ void bgInitTileSet(uint8_t bg, const void *tiles, const void *palette,
                                 vram_log_count, bg, bank_padded, offset_padded, dest_padded, tilesize);
             vram_log_count++;
         }
-        LoadVram((const unsigned char *)tiles, byteAddr, tilesize);
+        LoadVram((const unsigned char *)tiles, vramAddr, tilesize);
     }
     
     // Load palette to CGRAM
@@ -524,4 +527,4 @@ void bgInitTileSet(uint8_t bg, const void *tiles, const void *palette,
     
     // Note: tileoffset and other parameters may need additional handling
     // depending on how the game uses them. This is a basic implementation.
-}
+}*/
