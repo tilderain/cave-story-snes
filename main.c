@@ -84,7 +84,7 @@ int main(void)
     joy_init();*/
 
 
-    //dmaCopyVram(mariogfx, 0x0000, 32*8);
+    dmaCopyVram(mariogfx, 0x0000, 32*8);
 
     while(1) {
         game_main(0);

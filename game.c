@@ -242,12 +242,21 @@ void game_main(uint8_t load) {
 		//ready = TRUE;
 		//PF_BGCOLOR(0x000);
 		spcProcess();
+
+    REG_CGADD = 0;
+    REG_CGDATA = 0x00;
+    REG_CGDATA = 0x00;
+		
 		vdp_vsync();
 
+	REG_CGADD = 0; // Palette Index 0
+    REG_CGDATA = 0xff; // Pure Green (5-bit BGR: 00000 01111 00000)
+    REG_CGDATA = 0x00;
+		oamUpdate(); 
 		// Map buffer is updated by stage_draw_screen() when needed, no need to copy every frame
 		dmaCopyVram(map_buffer_bg1, 0x6000, 4096);
-        dmaCopyVram(map_buffer_bg2, 0x7000, 2048);
-		oamUpdate(); 
+        //dmaCopyVram(map_buffer_bg2, 0x7000, 2048);
+
     	// 3. Increment our counter because we successfully finished one frame
     	frames_drawn++;
 
@@ -269,6 +278,7 @@ void game_main(uint8_t load) {
     	}
 
 		bgSetEnable(0);
+		REG_TM = 0x1f;
 		stage_update();
 		joy_update();
 		//PF_BGCOLOR(0x00E);

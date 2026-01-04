@@ -30,10 +30,11 @@ void vdp_set_vblank_flag(void) {
 
 void WaitForVBlank(void) {
     // Wait for vblank flag to be set
-    while(!vblank_flag) {
-        // Busy wait
-    }
     vblank_flag = 0;
+    while(!vblank_flag) {
+        __asm(" wai");
+    }
+
 }
 
 void setScreenOn(void) {
@@ -273,9 +274,11 @@ void vdp_sprites_update() {}
 
 // OAM Update - SNES native implementation (stub for now)
 // OAM updates should be done via DMA using LoadOAMCopy during vblank
+
 void oamUpdate(void) {
     // OAM updates are typically done via DMA during vblank
     // This is a stub - actual OAM updates should use LoadOAMCopy
+    manual_oam_upload();
 }
 
 // OAM Set sprite - SNES native implementation (stub for now)

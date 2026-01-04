@@ -178,6 +178,51 @@ void player_init() {
 		.attr = TILE_ATTR(PAL0,0,0,1,TILE_PLAYERINDEX)
 	};*/
 }
+union uOAMCopy GLOBAL_OAMCopy;
+static uint8_t calcOAMTable2Byte(uint8_t index, uint8_t sizeBit, uint8_t xBit, uint8_t currentByte)
+{
+    uint8_t shift = (uint8_t)((index % 4u) * 2u);
+    uint8_t mask = (uint8_t)~(uint8_t)(0x03u << shift);
+    uint8_t value = (uint8_t)(((sizeBit << 1) | xBit) << shift);
+    return (uint8_t)((currentByte & mask) | value);
+}
+
+void manual_oam_set(uint8_t id, int16_t x, int16_t y, uint8_t priority, uint8_t hFlip, uint8_t vFlip, uint16_t tile, uint8_t palette, uint8_t sizeBit) {
+    uint8_t table2Index = (uint8_t)(id / 4u);
+    uint8_t currentByte = GLOBAL_OAMCopy.arr.OAMTable2[table2Index];
+    
+    // Determine the 9th bit of X (xBit)
+    // SNES uses this bit for positions 256-511 or negative positions (-256 to -1)
+    uint8_t xBit = (x < 0 || x > 255) ? 1u : 0u;
+
+    // 1. Update High Table (Size and X-MSB)
+    GLOBAL_OAMCopy.arr.OAMTable2[table2Index] = calcOAMTable2Byte(id, sizeBit, xBit, currentByte);
+
+    // 2. Update Low Table (X, Y, Tile, Attributes)
+    GLOBAL_OAMCopy.arr.OAMArray[id].OBJX = (uint8_t)x;
+    GLOBAL_OAMCopy.arr.OAMArray[id].OBJY = (uint8_t)y;
+    GLOBAL_OAMCopy.arr.OAMArray[id].CHARNUM = (uint8_t)(tile & 0xFF);
+
+    // Properties byte: vhopppcc
+    // c = 9th bit of tile index
+    uint8_t props = (vFlip << 7) | (hFlip << 6) | (priority << 4) | (palette << 1);
+    props |= (uint8_t)((tile >> 8) & 0x01);
+    
+    GLOBAL_OAMCopy.arr.OAMArray[id].PROPERTIES = props;
+}
+
+void manual_oam_upload() {
+    // This function is provided by your snesXC/PVSnesLib environment
+    // It handles the DMA transfer from your RAM union to the PPU OAM registers
+
+    // RESET OAM ADDRESS TO 0
+    // This is the most likely reason Mesen/Higan aren't moving the sprite.
+    // They respect the internal OAM pointer; No$cash often ignores it.
+    REG_OAMADDL = 0;
+    REG_OAMADDH = 0; 
+
+    LoadOAMCopy((char *)GLOBAL_OAMCopy.Bytes, 0x0000, sizeof(union uOAMCopy));
+}
 void player_draw() {
     // 1. Calculate Screen Coordinates
     // Convert fixed point (CSF) to integers, adjust for camera and screen center
@@ -191,7 +236,10 @@ void player_draw() {
     // priority: 3 (Highest, appears above layers)
     // gfxOffset: 0 (The tile we loaded at VRAM 0x0000)
     // paletteOffset: 0 (The red palette we set up)
-    oamSet(0, x, y, 3, 0, 0, 0, 0);
+    //oamSet(0, x, y, 3, 0, 0, 0, 0);
+
+    manual_oam_set(0, x, y, 3, 0, 0, 0, 0, 1);
+
 
     // 3. Queue the sprite for drawing
     //oamDynamic16Draw(0);
