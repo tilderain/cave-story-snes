@@ -56,7 +56,7 @@ uint16_t stageWidth, stageHeight = 0;
 // This takes up extra space, but there are times where scripts make modifications to the
 // level layout (allowing player to reach some areas) so it is necessary to do this
  uint8_t stagePXM[8];
- uint8_t stageBlocks[17924];
+ uint8_t stageBlocks[17924 + 8];
 // Which tileset (db/tileset.c) is used by the current stage
  uint8_t stageTileset = 0;
 // Prepares to draw off-screen tiles when stage_update() is later called
@@ -384,20 +384,18 @@ void stage_load_tileset() {
 
 
 
-void decompress_slz(const uint8_t *in, uint8_t *out) {
-   // Retrieve uncompressed size from SLZ header
-   uint16_t size = ((uint16_t)in[0] << 8) | in[1];
+
+void decompress_slz(uint8_t *in, uint8_t *out) {
+   // Retrieve uncompressed size
+   uint16_t size = in[0] << 8 | in[1];
    in += 2;
    
-   // Temporary buffer to hold the PXM header (8 bytes)
-   // 0-2: Sig, 3: Ver, 4-5: W, 6-7: H
-   uint8_t header[8];
-   
+   // To store the tokens
    uint8_t num_tokens = 1;
-   uint8_t tokens = 0;
-   uint16_t out_idx = 0; // Total bytes decompressed so far
-
-   while (size > 0) {
+   uint8_t tokens;
+   
+   // Go through all compressed data until we're done decompressing
+   while (size != 0) {
       // Need more tokens?
       num_tokens--;
       if (num_tokens == 0) {
@@ -405,88 +403,86 @@ void decompress_slz(const uint8_t *in, uint8_t *out) {
          num_tokens = 8;
       }
       
-      // Determine next byte(s) to output
+      // Compressed string?
       if (tokens & 0x80) {
-         // Compressed string
-         uint16_t dist = ((uint16_t)in[0] << 8) | in[1];
-         uint8_t len = (dist & 0x0F) + 3;
+         // Get distance and length
+         uint16_t dist = in[0] << 8 | in[1];
+         uint8_t len = dist & 0x0F;
          dist = dist >> 4;
          in += 2;
-         size -= len;
-
-         // Copy loop
-         while(len--) {
-            uint8_t byte;
-            // Handle back-reference logic
-            // If the reference goes back into the header, read from header[]
-            // Otherwise read from the output buffer
-            int16_t ref_pos = out_idx - dist - 3;
-            
-            if (ref_pos < 0) {
-                // Should not happen in valid PXM usually, but safety first
-                byte = 0; 
-            } else if (ref_pos < 8) {
-                // Reference falls inside the PXM header
-                byte = header[ref_pos];
-            } else {
-                // Reference is inside the tile body
-                byte = out[ref_pos - 8];
-            }
-
-            // Write logic
-            if (out_idx < 8) {
-                header[out_idx] = byte;
-            } else {
-                *out++ = byte;
-            }
-            out_idx++;
+         
+         // Discount string length from size
+         size -= len + 3;
+         
+         // Copy string using Duff's device
+         uint8_t *ptr = out - dist - 3;
+         switch (len) {
+            case 15: *out++ = *ptr++;
+            case 14: *out++ = *ptr++;
+            case 13: *out++ = *ptr++;
+            case 12: *out++ = *ptr++;
+            case 11: *out++ = *ptr++;
+            case 10: *out++ = *ptr++;
+            case  9: *out++ = *ptr++;
+            case  8: *out++ = *ptr++;
+            case  7: *out++ = *ptr++;
+            case  6: *out++ = *ptr++;
+            case  5: *out++ = *ptr++;
+            case  4: *out++ = *ptr++;
+            case  3: *out++ = *ptr++;
+            case  2: *out++ = *ptr++;
+            case  1: *out++ = *ptr++;
+            case  0: *out++ = *ptr++;
+                     *out++ = *ptr++;
+                     *out++ = *ptr++;
          }
-      }
-      else {
-         // Uncompressed byte
-         uint8_t byte = *in++;
-         size--;
-
-         // Write logic
-         if (out_idx < 8) {
-             header[out_idx] = byte;
-         } else {
-             *out++ = byte;
-         }
-         out_idx++;
       }
       
-      // Check if we just finished reading the header (byte index 7)
-      if (out_idx == 8) {
-          stageWidth  = header[4] | (header[5] << 8);
-          stageHeight = header[6] | (header[7] << 8);
-          iprintf("Map Size: %d x %d\n", stageWidth, stageHeight);
+      // Uncompressed byte?
+      else {
+         // Store byte as-is
+         *out++ = *in++;
+         size--;
       }
-
-      tokens <<= 1;
+      
+      // Go for next token
+      tokens += tokens;
    }
 }
-
 
 void stage_load_blocks() {
     iprintf("decompress");
     
-    // Decompress directly into stageBlocks
-    // The function now handles stripping the header and setting W/H
+    // 1. Decompress EVERYTHING (Header + Data) directly into stageBlocks
+    // Warning: stageBlocks must be large enough to hold the extra 8 header bytes temporarily
     decompress_slz(stage_info[stageID].PXM, stageBlocks);
 
-    // Rebuild the Y-lookup table (stageTable)
-    // stageBlocks is now pure tile data, so offset 0 is row 0
+    // 2. Extract Width and Height from the header (located at stageBlocks[0..7])
+    // The previous code implied width at [4-5] and height at [6-7]
+    stageWidth = stageBlocks[4] | (stageBlocks[5] << 8);
+    stageHeight = stageBlocks[6] | (stageBlocks[7] << 8);
+
+    iprintf("Map Size: %d x %d\n", stageWidth, stageHeight);
+
+    // 3. Shift the actual map data "down" to overwrite the header.
+    // The data currently starts at stageBlocks[8]. We want it at stageBlocks[0].
+    uint32_t mapSize = (uint32_t)stageWidth * (uint32_t)stageHeight;
+    uint32_t i;
+    
+    // Simple copy loop to shift data left by 8 bytes
+    // Since we are copying to a lower address, iterating forward is safe
+    for(i = 0; i < mapSize; i++) {
+        stageBlocks[i] = stageBlocks[i + 8];
+    }
+
+    // 4. Generate the multiplication table for stage rows
+    // (Assuming stageTable is already allocated)
     uint16_t blockTotal = 0;
     uint16_t y;
-    for( y = 0; y < stageHeight; y++) {
-        // Safety bounds check
-        if (y < 240) {
-            stageTable[y] = blockTotal;
-        }
+    for(y = 0; y < stageHeight; y++) {
+        stageTable[y] = blockTotal;
         blockTotal += stageWidth;
     }
-	iprintf("Map Size: %d x %d\n", stageWidth, stageHeight);
 }
 
 void stage_load_entities() {
