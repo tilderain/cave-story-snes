@@ -31,19 +31,28 @@
 
 // SNES button definitions (compatible with PVSneslib KEY_* constants)
 // These map to SNES joypad register bits
-#define KEY_RIGHT   JOY_RIGHT_MASK
-#define KEY_LEFT    JOY_LEFT_MASK
-#define KEY_DOWN    JOY_DOWN_MASK
-#define KEY_UP      JOY_UP_MASK
-#define KEY_START   JOY_START_MASK
-#define KEY_SELECT  JOY_SELECT_MASK
-#define KEY_Y       JOY_Y_MASK
-#define KEY_B       JOY_B_MASK
-#define KEY_X       JOY_X_MASK
-#define KEY_A       JOY_A_MASK
-#define KEY_L       JOY_L_MASK
-#define KEY_R       JOY_R_MASK
 
+    
+// Native SNES Controller Bitmasks
+// Matches the 16-bit Auto-Read register ($4218) directly.
+
+// Low Byte ($4218): A, X, L, R, 0, 0, 0, 0
+#define KEY_R       0x0010  // Bit 4
+#define KEY_L       0x0020  // Bit 5
+#define KEY_X       0x0040  // Bit 6
+#define KEY_A       0x0080  // Bit 7
+
+// High Byte ($4219): B, Y, Select, Start, Up, Down, Left, Right
+#define KEY_RIGHT   0x0100  // Bit 8
+#define KEY_LEFT    0x0200  // Bit 9
+#define KEY_DOWN    0x0400  // Bit 10
+#define KEY_UP      0x0800  // Bit 11
+#define KEY_START   0x1000  // Bit 12
+#define KEY_SELECT  0x2000  // Bit 13
+#define KEY_Y       0x4000  // Bit 14
+#define KEY_B       0x8000  // Bit 15
+
+  
 #define JOY_TYPE_PAD3           0x00
 #define JOY_TYPE_PAD6           0x01
 

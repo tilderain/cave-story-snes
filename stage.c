@@ -208,7 +208,7 @@ void loadStageBackground(int index) {
 	bgSetEnable(1);
 //setMode(BG_MODE1, 0);   // Set Mode 1
 bgSetEnable(0);         // Explicitly enable BG0
-setScreenOn();          // Turn on display
+//setScreenOn();          // Turn on display
 }
 void stage_load(uint16_t id) {
 	iprintf("Loading stage %d\n", id);
@@ -287,12 +287,12 @@ void stage_load(uint16_t id) {
 	//camera.x_offset = 0;
 	//camera.y_offset = 0;
 
-    //disable_ints;
+    disable_ints;
     //z80_request();
 	//test_draw_sequential(); // Draw 64x32 foreground PXM area at camera's position
 	stage_draw_screen();
     //z80_release();
-    //enable_ints;
+    enable_ints;
 
 	/*stage_load_entities(); // Create entities defined in the stage's PXE
 	// For rooms where the boss is always loaded
@@ -313,10 +313,9 @@ void stage_load(uint16_t id) {
     enable_ints;
 
 	if((playerEquipment & EQUIP_CLOCK) || stageID == STAGE_HELL_B1) system_draw_counter();
-	tsc_load_stage(id);
-	vdp_set_display(TRUE);*/
+	tsc_load_stage(id);*/
+	vdp_set_display(TRUE);
 	setPaletteColor(0, 0);
-
 
 }
 
@@ -359,9 +358,9 @@ void stage_load_tileset() {
         //decompress_uftc(buf, tileset_info[stageTileset].pat, i, num);
         //vdp_tiles_load(tileset_info[stageTileset].pat, TILE_TSINDEX, tileset_info[stageTileset].size*32);
 		iprintf("loading tileset %d\n", stageTileset);
-		setScreenOff();
+		//setScreenOff();
 		bgInitTileSet(0, tileset_info[stageTileset].pat, tileset_info[stageTileset].palette, 0, (tileset_info[stageTileset].size*128), 16 * 2, BG_16COLORS, 0x2000);
-		setScreenOn();
+		//setScreenOn();
 
     //}
 	// Inject the breakable block sprite into the tileset
@@ -924,9 +923,9 @@ void stage_draw_background() {
 	uint16_t pal = background_info[stageBackground].palette;
 	uint16_t y, x;
 	test_draw_sequential();
-	vdp_vsync();
+	//vdp_vsync();
 	dmaCopyVram(map_buffer_bg2, 0x7000, 2048);
-	vdp_vsync();
+	//vdp_vsync();
 	return;
 	for( y = 0; y < 32; y += h) {
 		for( x = 0; x < 64; x += w) {

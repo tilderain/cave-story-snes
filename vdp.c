@@ -130,7 +130,7 @@ static void pad_hex_str(char *out, const char *in, uint8_t width) {
 // DMA copy to VRAM - SNES native implementation
 void dmaCopyVram(const void *src, uint16_t dest, uint16_t size) {
     // Log only the first 20 VRAM writes
-    if (vram_log_count < 20) {
+    /*if (vram_log_count < 20) {
         // Log the LoadVram call (24-bit pointer: bank + offset)
         uint32_t ptr = (uint32_t)(uintptr_t)src;
         uint8_t bank = (ptr >> 16) & 0xFF;
@@ -147,7 +147,7 @@ void dmaCopyVram(const void *src, uint16_t dest, uint16_t size) {
         consoleNocashMessage("LoadVram[%u]: src=0x%s:%s dest=0x%s size=%u\n", 
                             vram_log_count, bank_padded, offset_padded, dest_padded, size);
         vram_log_count++;
-    }
+    }*/
     // Use snesXC LoadVram function for direct DMA transfer
 
     uint16_t byteAddr = dest << 1;

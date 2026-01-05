@@ -33,56 +33,55 @@ void joy_init() {
 	return;
 
 }
-
+#define REG_JOYxLH(a) (((volatile uint16_t *)0x4218)[(a)])
 // Read pad state for port (0-1)
 // Returns 16-bit button state
 // SNES format: REG_JOY1L = axlr0000, REG_JOY1H = byetUDLR (active low)
 // We need to invert and map to match KEY_* constants
 uint16_t padsCurrent(uint8_t port) {
-    uint8_t joy_l, joy_h;
+    // 1. Wait for Auto-Read to complete.
+    // Documentation: "Official guides advise to check if automatic reading has finished 
+    // by reading the HVBJOY register ($4212)."
+    // Bit 0 of $4212 is high while the controller is being read.
+    while (REG_HVBJOY & 1); 
+
+    uint16_t joy_raw = 0;
     uint16_t result = 0;
-    
-    if(port == 0) {
-        // REG_JOY1L ($4218) contains AXLR0000
-        joy_l = REG_JOY1L;  
-        // REG_JOY1H ($4219) contains BYetUDLR
-        joy_h = REG_JOY1H;  
+
+    // 2. Read the full 16-bit state at once.
+    // Documentation: "The values read from the controllers are made available 
+    // via the JOY1-JOY4 registers ($4218-421F)."
+    if (port == 0) {
+        // Reads $4218 (Low) and $4219 (High) as a single word
+        joy_raw = REG_JOYxLH(0); 
     } else {
-        joy_l = REG_JOY2L;
-        joy_h = REG_JOY2H;
+        // Reads $421A (Low) and $421B (High) as a single word
+        joy_raw = REG_JOYxLH(1); 
     }
+
+    // 3. Map bits to KEY constants.
+    // In a 16-bit Little Endian read:
+    // Bits 15-8 come from the High Byte ($4219): B, Y, Sel, Start, Up, Down, Left, Right
+    // Bits 7-0  come from the Low Byte ($4218):  A, X, L, R, 0, 0, 0, 0
     
-    // STOP: Do NOT invert (~) these registers.
-    // The SNES hardware $4218 registers are already Active High.
-    // 1 = Pressed, 0 = Released.
-    
-    // Map to KEY_* constants format
-    
-    // Directional buttons from high byte ($4219: BYetUDLR)
-    // Masks should match bits 0-3 (R, L, D, U)
-    if(joy_h & JOY_RIGHT_MASK) result |= KEY_RIGHT;
-    if(joy_h & JOY_LEFT_MASK)  result |= KEY_LEFT;
-    if(joy_h & JOY_DOWN_MASK)  result |= KEY_DOWN;
-    if(joy_h & JOY_UP_MASK)    result |= KEY_UP;
-    
-    // Action buttons from high byte ($4219: BYetUDLR)
-    // Masks should match bits 4-7 (Start, Sel, Y, B)
-    if(joy_h & JOY_START_MASK)  result |= KEY_START;
-    if(joy_h & JOY_SELECT_MASK) result |= KEY_SELECT;
-    if(joy_h & JOY_Y_MASK)      result |= KEY_Y;
-    if(joy_h & JOY_B_MASK)      result |= KEY_B;
-    
-    // Shoulder buttons from low byte ($4218: AXLR0000)
-    // Masks should match bits 4-7 (R, L, X, A)
-    // Note: The lower 4 bits are ID codes (usually 0), so we ignore them by using correct masks.
-    if(joy_l & JOY_R_MASK) result |= KEY_R;
-    if(joy_l & JOY_L_MASK) result |= KEY_L;
-    if(joy_l & JOY_X_MASK) result |= KEY_X;
-    if(joy_l & JOY_A_MASK) result |= KEY_A;
-    
+    // High Byte ($4219)
+    if (joy_raw & 0x8000) result |= KEY_B;      // Bit 15
+    if (joy_raw & 0x4000) result |= KEY_Y;      // Bit 14
+    if (joy_raw & 0x2000) result |= KEY_SELECT; // Bit 13
+    if (joy_raw & 0x1000) result |= KEY_START;  // Bit 12
+    if (joy_raw & 0x0800) result |= KEY_UP;     // Bit 11
+    if (joy_raw & 0x0400) result |= KEY_DOWN;   // Bit 10
+    if (joy_raw & 0x0200) result |= KEY_LEFT;   // Bit 9
+    if (joy_raw & 0x0100) result |= KEY_RIGHT;  // Bit 8
+
+    // Low Byte ($4218)
+    if (joy_raw & 0x0080) result |= KEY_A;      // Bit 7
+    if (joy_raw & 0x0040) result |= KEY_X;      // Bit 6
+    if (joy_raw & 0x0020) result |= KEY_L;      // Bit 5
+    if (joy_raw & 0x0010) result |= KEY_R;      // Bit 4
+
     return result;
 }
-
 void joy_update() {
 	//iprintf("joy_update %d %d\n", joystate, oldstate);
 	oldstate = joystate;

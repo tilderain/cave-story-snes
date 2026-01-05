@@ -283,9 +283,9 @@ void game_main(uint8_t load) {
 		joy_update();
 		//PF_BGCOLOR(0x00E);
 
-    	//u8 pad0 = padsCurrent(0);
-		//if(pad0 & KEY_L) {stage_no--; stage_load(stage_no);}
-    	//if(pad0 & KEY_R) {stage_no++; stage_load(stage_no);}
+    	u8 pad0 = padsCurrent(0);
+		if(pad0 & KEY_L) {stage_no--; stage_load(stage_no);}
+    	if(pad0 & KEY_R) {stage_no++; stage_load(stage_no);}
 		//aftervsync();
 		
 	}
