@@ -563,8 +563,27 @@ __near __interrupt void __irq_brk(void) {
 	snesXC_brk();
 }
 
-__near __interrupt void __irq_vblank(void) {
-	snesXC_nmi();
+__near void __irq_vblank(void) {
+    __asm(
+        " php \n"           // Save the game's status (including 8/16-bit state)
+        " rep #$30 \n"      // Force A, X, Y to 16-bit mode IMMEDIATELY
+        " pha \n"           // Save 16-bit Registers
+        " phx \n"
+        " phy \n"
+        " phd \n"           // Save Direct Page (Direct Page is used by C)
+        
+        " lda #$0000 \n"    // Set Direct Page to 0 (Standard for C)
+        " tcd \n"
+        
+        " jsl _snesXC_nmi \n" // Call your C logic function
+        
+        " pld \n"           // Restore Direct Page
+        " ply \n"           // Restore Y
+        " plx \n"           // Restore X
+        " pla \n"           // Restore A
+        " plp \n"           // Restore the game's original status (8/16-bit mode)
+        " rti \n"           // Return from Interrupt
+    );
 }
 
 __near __interrupt void __irq_cop6502(void) {
