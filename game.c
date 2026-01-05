@@ -241,7 +241,7 @@ void game_main(uint8_t load) {
 		//system_update();
 		//ready = TRUE;
 		//PF_BGCOLOR(0x000);
-		spcProcess();
+		//spcProcess();
 
     REG_CGADD = 0;
     REG_CGDATA = 0x00;
@@ -283,7 +283,7 @@ void game_main(uint8_t load) {
 		joy_update();
 		//PF_BGCOLOR(0x00E);
 
-    	u8 pad0 = padsCurrent(0);
+    	u16 pad0 = padsCurrent(0);
 		if(pad0 & KEY_L) {stage_no--; stage_load(stage_no);}
     	if(pad0 & KEY_R) {stage_no++; stage_load(stage_no);}
 		//aftervsync();

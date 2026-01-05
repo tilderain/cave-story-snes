@@ -412,21 +412,6 @@ void consoleNocashMessage(const char *format, ...) {
     }
 }
 
-// --- Audio (stubs for now) ---
-
-// Process SPC700 audio (stub for now)
-void spcProcess(void) {
-    // Audio processing would go here
-    // For now, just a stub
-}
-
-// Play sound via SPC700 (stub for now)
-void spcPlaySound(uint8_t sound) {
-    // Stub for PVSneslib spcPlaySound function
-    // Use sound_play() from audio.h instead
-    (void)sound;
-}
-
 // --- Background Mode & Layer Control ---
 
 // Set background mode - SNES native implementation

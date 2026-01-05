@@ -66,14 +66,14 @@ export PATH := $(PATH):$(VBCC)/bin
 ifeq ($(COMPILER_LOWER),vbcc65816)
     # 1. Standard tools
     CC = $(VBCC)/bin/vc
-    AS = $(VBCC)/bin/vasm65816_oldstyle
+    AS = $(VBCC)/bin/vasm6502_oldstyle
     
     # 2. Point LD directly to vlink (bypass vc for linking)
     LD = $(VBCC)/bin/vlink
     
     # 3. Compiler Flags (Compilation only)
     CCFLAGS = +snes-hi -lm -maxoptpasses=300 -O3 -inline-depth=1000 -unroll-all -fp-associative -force-statics -range-opt -I"$(SHARED_SRC_DIR)" -I"lib" -I"include" -I"elua-0.9/inc" -I"elua-0.9/inc/snes" -I"elua-0.9/src/lua" -I"elua-0.9/inc/newlib" -D__VBCC__=1 -DLUA_CROSS_COMPILER -D__VBCC65816__ -c
-    ASFLAGS = -816 -quiet -nowarn=62 -opt-branch -ldots -Fvobj
+    ASFLAGS = -816 -quiet -nowarn=62 -opt-branch -ldots -Fvobj -underscore
     
     # 4. Linker Flags (Direct vlink arguments)
     # We explicitly include the startup.o, standard libs, and ROM size here
@@ -98,13 +98,13 @@ endif
 # 1. NEW: VBCC Classic Configuration (Supports -O4)
 ifeq ($(COMPILER_LOWER),vbcc_classic)
     CC = $(VBCC)/bin/vc
-    AS = $(VBCC)/bin/vasm65816_oldstyle
+    AS = $(VBCC)/bin/vasm6502_oldstyle
     # In classic mode, we use vc as the linker to handle LTO (-O4)
     LD = $(VBCC)/bin/vc
     
     # Enable -O4 for whole-program optimization
     CCFLAGS = +snes-hi -lm -maxoptpasses=300 -O4 -inline-depth=1000 -unroll-all -fp-associative -force-statics -range-opt -I"$(SHARED_SRC_DIR)" -I"lib" -I"include" -I"elua-0.9/inc" -I"elua-0.9/inc/snes" -I"elua-0.9/src/lua" -I"elua-0.9/inc/newlib" -D__VBCC__=1 -DLUA_CROSS_COMPILER -D__VBCC65816__ -c
-    ASFLAGS = -816 -quiet -nowarn=62 -opt-branch -ldots -Fvobj
+    ASFLAGS = -816 -quiet -nowarn=62 -opt-branch -ldots -Fvobj -underscore
     
     # Linker Flags:
     # 1. We use --M to generate a map file. The 'vc' driver strips one '-' and passes it to vlink.
@@ -272,9 +272,10 @@ endif
 ifneq ($(filter vbcc65816 vbcc_classic,$(COMPILER_LOWER)),)
 	PROJECT_C_FILES = $(wildcard *.c)
 	C_SOURCES = $(PROJECT_C_FILES) $(SHARED_SRC_DIR)/initsnes.c
-	ASM_SOURCES = 
+	ASM_SOURCES = snesmod_api.s
 	PROJECT_OBJECTS = $(addprefix $(BUILD_DIR)/,$(addsuffix .o,$(basename $(PROJECT_C_FILES))))
-	OBJECTS = $(PROJECT_OBJECTS) $(BUILD_DIR)/initsnes.o
+	OBJECTS = $(PROJECT_OBJECTS) $(BUILD_DIR)/initsnes.o \
+          $(BUILD_DIR)/snesmod_api.o 
 	vpath %.c $(SHARED_SRC_DIR) .
 	vpath %.asm 
 	vpath %.h .

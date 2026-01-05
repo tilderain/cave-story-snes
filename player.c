@@ -813,7 +813,7 @@ static void player_update_jump() {
 			// Maybe possibly fix jump height?
 			player.jump_time = (pal_mode || cfg_60fps) ? 0 : 3;
 			player.jump_time += player.underwater ? 2 : 0;
-			spcPlaySound(0);
+			//spcPlaySound(0);
 			sound_play(SND_PLAYER_JUMP, 3);
 		}
 	} else {

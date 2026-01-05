@@ -8,13 +8,15 @@
 #include "pv_compat.h"
 
 #include "common.h"
+
+#include "snesmod.h"
 //---------------------------------------------------------------------------------
 int main(void)
 {
     initSNES(FASTROM);
 
     // Initialize sound engine (take some time)
-    //spcBoot();
+    spcBoot();
 
     // Initialize text console with our font
     //consoleSetTextMapPtr(0x6000);
