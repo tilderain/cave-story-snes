@@ -11,6 +11,24 @@ SHARED_PORT_DIR ?= ../port
 BUILD_DIR ?= build
 
 # =============================================================================
+# AUDIO CONFIGURATION (SNESMOD)
+# =============================================================================
+
+SMCONV      := $(PVSNESLIB_HOME)/devkitsnes/tools/smconv
+
+# List your .it files here in order
+AUDIOFILES  := res/WANPAK2.it res/Gestation.it
+
+SOUNDBANK_BNK := res/soundbank.bnk
+SOUNDBANK_ASM_WRAPPER := res/soundbank_vasm.s
+SOUNDBANK_OUTPUT   := res/soundbank
+# SMCONV Flags:
+# -s: silent, -o: output path, -v: verbose
+# -b 5: Bank size (5=32k, often safer for compatibility)
+# -i: HiROM (remove this flag if compiling for LoROM)
+SMCONVFLAGS = -s -i -V -b 3 -o $(SOUNDBANK_OUTPUT)
+
+# =============================================================================
 # TOOLCHAIN PATHS (Modify these or add to your $PATH)
 # =============================================================================
 # Defaults assume tools are in your $PATH. Override via command line or env vars.
@@ -270,15 +288,22 @@ endif
 
 # VBCC65816 Source Configuration
 ifneq ($(filter vbcc65816 vbcc_classic,$(COMPILER_LOWER)),)
-	PROJECT_C_FILES = $(wildcard *.c)
-	C_SOURCES = $(PROJECT_C_FILES) $(SHARED_SRC_DIR)/initsnes.c
-	ASM_SOURCES = snesmod_api.s
-	PROJECT_OBJECTS = $(addprefix $(BUILD_DIR)/,$(addsuffix .o,$(basename $(PROJECT_C_FILES))))
-	OBJECTS = $(PROJECT_OBJECTS) $(BUILD_DIR)/initsnes.o \
-          $(BUILD_DIR)/snesmod_api.o 
-	vpath %.c $(SHARED_SRC_DIR) .
-	vpath %.asm 
-	vpath %.h .
+    PROJECT_C_FILES = $(wildcard *.c)
+    C_SOURCES = $(PROJECT_C_FILES) $(SHARED_SRC_DIR)/initsnes.c
+    ASM_SOURCES = snesmod_api.s
+    PROJECT_OBJECTS = $(addprefix $(BUILD_DIR)/,$(addsuffix .o,$(basename $(PROJECT_C_FILES))))
+    
+    # NEW: Add the soundbank object specifically
+    AUDIO_OBJ =
+    ifneq ($(strip $(AUDIOFILES)),)
+        AUDIO_OBJ = $(BUILD_DIR)/soundbank_vasm.o
+    endif
+
+    OBJECTS = $(PROJECT_OBJECTS) $(BUILD_DIR)/initsnes.o \
+              $(BUILD_DIR)/snesmod_api.o $(AUDIO_OBJ)
+              
+    vpath %.c $(SHARED_SRC_DIR) .
+    vpath %.s res/  # Ensure vpath can find your new .s file
 endif
 
 # Calypsi Source Configuration
@@ -463,7 +488,7 @@ $(BUILD_DIR)/runtime_stubs.o: $(SHARED_PORT_DIR)/cc65/runtime_stubs.s
 endif
 
 # Clean target
-clean:
+clean: cleanAudio
 	rm -rf $(BUILD_DIR)
 	rm -f *.obj *.o *.bin *.bnk *.map *.smc PROG.LINK *.sfc
 	@echo Clean complete!
@@ -518,4 +543,29 @@ help:
 # Phony targets
 .PHONY: all clean wdc vbcc65816 calypsi llvm-mos cc65 jcc816 tcc816 info help
 
-  
+
+
+# 1. Run smconv to get the .bnk and .h (ignore the .asm it generates)
+$(SOUNDBANK_BNK): $(AUDIOFILES)
+	@echo "--- Generating Soundbank ---"
+	@mkdir -p res
+	@# Verify files exist to catch path errors early
+	@for f in $(AUDIOFILES); do \
+		if [ ! -f $$f ]; then echo "ERROR: File $$f not found!"; exit 1; fi; \
+	done
+	@# Run smconv from the project root
+	$(SMCONV) $(SMCONVFLAGS) $(AUDIOFILES)
+	@if [ ! -f $(SOUNDBANK_BNK) ]; then \
+		echo "ERROR: smconv failed to create $(SOUNDBANK_BNK)"; \
+		exit 1; \
+	fi
+
+$(BUILD_DIR)/soundbank_vasm.o: $(SOUNDBANK_ASM_WRAPPER) $(SOUNDBANK_BNK)
+	@mkdir -p $(BUILD_DIR)
+	@echo "Assembling VASM Soundbank Wrapper..."
+	$(AS) $(ASFLAGS) -Ires -o $@ $<
+
+# Update cleanAudio to clean the binary and header
+cleanAudio:
+	@echo "Cleaning Audio..."
+	rm -f res/soundbank.asm res/soundbank.h res/soundbank.bnk

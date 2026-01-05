@@ -40,7 +40,10 @@
 ;----------------------------------------------------------------------
 ; soundbank defs
 ;----------------------------------------------------------------------
+    
+HIROM = 1
 
+  
     ifdef HIROM
 SB_SAMPCOUNT    = $0000
 SB_MODCOUNT     = $0002
@@ -112,7 +115,7 @@ digi_src2:  ds 3
 SoundTable: ds 3
 
 ;======================================================================
-    section "_bss.far.snesmod", "aurw"
+    section "_bss.near.snesmod", "aurw"
 ;======================================================================
 
 spc_fifo:       ds 256  ; 128-byte command fifo
@@ -196,7 +199,7 @@ sb_start:
     a8              ; Tell vasm A is 8-bit
     
     ; Note: Assuming SM_SPC_SIZE is defined in your symbols or calculated
-    cpx #SM_SPC_SIZE   
+    cpx	#SM_SPC_end-SM_SPC	; loop until all bytes transferred   
     
     bcc sb_send             ;
 ;----------------------------------------------------------------------
