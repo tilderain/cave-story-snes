@@ -23,11 +23,11 @@ int main(void)
     //consoleSetTextGfxPtr(0x3000);
     //consoleInitText(1, 16 * 2, &snesfont, &snespal);
     // Set give soundbank
-    //spcSetBank(&SOUNDBANK__);
+    spcSetBank(&SOUNDBANK__);
     // allocate around 10K of sound ram (39 256-byte blocks)
-    //spcAllocateSoundRegion(39);
+    spcAllocateSoundRegion(39);
     // Load music
-    //spcLoad(MOD_GESTATION);
+    spcLoad(MOD_GESTATION);
     // Load sample
     //spcSetSoundEntry(15, 8, 6, &walksndend - &walksnd, &walksnd, &walksnd);
     //spcSetSoundEntry(15, 8, 6, &jumpsndend - &jumpsnd, &jumpsnd, &Jump);
@@ -46,7 +46,9 @@ int main(void)
     bgSetGfxPtr(0, 0x4000);
     //bgInitTileSet(0, &UFTC_Cave, tileset_info[3].palette, 0, (tileset_info[stageTileset].size*32), 16 * 2, BG_16COLORS, 0x2000);
     bgSetMapPtr(1, 0x7000, SC_32x32);
-    
+
+    spcPlay(0);
+    spcSetModuleVolume(100);
     /*
     // Draw a wonderful text :P
     // Put some text
@@ -55,8 +57,7 @@ int main(void)
 
     // Wait for nothing :P
     setScreenOn();
-    //spcPlay(0);
-    //spcSetModuleVolume(100);
+
 
    // consoleMesenBreakpoint();
 

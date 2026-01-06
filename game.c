@@ -241,7 +241,7 @@ void game_main(uint8_t load) {
 		//system_update();
 		//ready = TRUE;
 		//PF_BGCOLOR(0x000);
-		//spcProcess();
+		spcProcess();
 
     REG_CGADD = 0;
     REG_CGDATA = 0x00;

@@ -21,19 +21,19 @@ void spcBoot(void);
     \brief set soundbank origin. soundbank must have dedicated bank(s)
     \param bank	bank address
 */
-void spcSetBank(u8 *bank);
+__pascal void spcSetBank(u8 *bank);
 
 /*! \fn  spcLoad(u16 musIndex)
     \brief load module into sm-spc. this function may take some time to execute
     \param musIndex	module_id
 */
-void spcLoad(u16 musIndex);
+__pascal void spcLoad(u16 musIndex);
 
 /*! \fn  spcLoadEffect(u16 sfxIndex)
     \brief load sound effect into sm-spc. this function may take some time to execute
     \param sfxIndex	sfx_id
 */
-void spcLoadEffect(u16 sfxIndex);
+__pascal void spcLoadEffect(u16 sfxIndex);
 
 /*! \fn  spcPlay(u8 startPos)
     \brief play module.
@@ -46,7 +46,7 @@ void spcLoadEffect(u16 sfxIndex);
     wait until SPC_P of the status register is set.
     \param startPos	starting position
 */
-void spcPlay(u8 startPos);
+__pascal void spcPlay(u8 startPos);
 
 /*! \fn  spcStop(void)
     \brief stop playing the current module.
@@ -69,14 +69,14 @@ void spcResumeMusic(void);
     \brief set the module playback volume
     \param vol	volume (0..255)
 */
-void spcSetModuleVolume(u8 vol);
+__pascal void spcSetModuleVolume(u8 vol);
 
 /*! \fn  spcFadeModuleVolume(u16 vol, u16 fadespeed)
     \brief fade the module volume towards the target
     \param vol	volume (0..255)
     \param fadespeed	fade speed (volume(0..255) += y every 32ms)
 */
-void spcFadeModuleVolume(u16 vol, u16 fadespeed);
+__pascal void spcFadeModuleVolume(u16 vol, u16 fadespeed);
 
 /*! \fn  spcFlush(void)
     \brief Flush message queue (force sync)
@@ -99,7 +99,7 @@ void spcProcess(void);
     \param sfxIndex	effect index (0-15)
     \param volpan	volume(0..15) AND panning(0..15) (volume*16+pan)
 */
-void spcEffect(u16 pitch, u16 sfxIndex, u8 volpan);
+__pascal void spcEffect(u16 pitch, u16 sfxIndex, u8 volpan);
 
 /*! \fn  spcGetMusicPosition(void)
     \brief Get current running pattern
@@ -112,7 +112,7 @@ u8 spcGetMusicPosition(void);
     \param sndTableAddr	address of sound table
     \param sndTableBank	bank of sound table
 */
-void spcSetSoundTable(u16 sndTableAddr, u8 sndTableBank);
+__pascal void spcSetSoundTable(u16 sndTableAddr, u8 sndTableBank);
 
 /*! \fn spcSetSoundEntry(u8 vol, u8 panning, u8 pitch, u16 length, u8 *sampleaddr, brrsamples *ptr)
     \brief set the values and address of the SOUND TABLE for a sound entry
@@ -123,7 +123,7 @@ void spcSetSoundTable(u16 sndTableAddr, u8 sndTableBank);
     \param sampleaddr	address of brr sample
     \param ptr	address of variable where sounds values will be stored
 */
-void spcSetSoundEntry(u8 vol, u8 panning, u8 pitch, u16 length, u8 *sampleaddr, brrsamples *ptr);
+__pascal void spcSetSoundEntry(u8 vol, u8 panning, u8 pitch, u16 length, u8 *sampleaddr, brrsamples *ptr);
 
 /*! \fn spcSetSoundDataEntry(u8 vol, u8 panning, u8 pitch, u16 length, u8 *sampleaddr, brrsamples *ptr)
     \brief set the values of a sound entry
@@ -134,14 +134,14 @@ void spcSetSoundEntry(u8 vol, u8 panning, u8 pitch, u16 length, u8 *sampleaddr, 
     \param sampleaddr	address of brr sample
     \param ptr	address of variable where sounds values will be stored
 */
-void spcSetSoundDataEntry(u8 vol, u8 panning, u8 pitch, u16 length, u8 *sampleaddr, brrsamples *ptr);
+__pascal void spcSetSoundDataEntry(u8 vol, u8 panning, u8 pitch, u16 length, u8 *sampleaddr, brrsamples *ptr);
 
 //---------------------------------------------------------------------------------
 /*! \fn spcSetSoundTableEntry(brrsamples *ptr)
     \brief set the address of the SOUND TABLE for a sound entry
     \param ptr	address of variable where sounds values will be stored
 */
-void spcSetSoundTableEntry(brrsamples *ptr);
+__pascal void spcSetSoundTableEntry(brrsamples *ptr);
 
 /*! \fn  spcAllocateSoundRegion(u8 size);
     \brief Set the size of the sound region.
@@ -152,7 +152,7 @@ void spcSetSoundTableEntry(brrsamples *ptr);
     This function will STOP module playback too.
     \param size	size of sound region (size*256 bytes)
 */
-void spcAllocateSoundRegion(u8 size);
+__pascal void spcAllocateSoundRegion(u8 size);
 
 /*! \fn  spcPlaySound(u8 sndIndex)
     \brief Play sound from memory (using default arguments)
@@ -160,7 +160,7 @@ void spcAllocateSoundRegion(u8 size);
     Be careful: the index 0 corresponds to the LAST sound loaded.
     The index 1 is the penultimate sound loaded and so on...
 */
-void spcPlaySound(u8 sndIndex);
+__pascal void spcPlaySound(u8 sndIndex);
 
 /*! \fn  spcPlaySoundV(u8 sndIndex, u16 volume)
     \brief Play sound from memory (using default arguments)
@@ -169,6 +169,6 @@ void spcPlaySound(u8 sndIndex);
     The index 1 is the penultimate sound loaded and so on...
     \param volume	volume (0..15)
 */
-void spcPlaySoundV(u8 sndIndex, u16 volume);
+__pascal void spcPlaySoundV(u8 sndIndex, u16 volume);
 
 #endif /* _SPC700_H */
