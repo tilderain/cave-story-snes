@@ -10,6 +10,10 @@
 #include "common.h"
 
 #include "snesmod.h"
+
+#include "res/soundbank.h"
+
+extern unsigned char SOUNDBANK__; // The symbol from ASM
 //---------------------------------------------------------------------------------
 int main(void)
 {
