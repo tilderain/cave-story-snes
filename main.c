@@ -11,9 +11,6 @@
 
 #include "snesmod.h"
 
-#include "res/soundbank.h"
-
-extern unsigned char SOUNDBANK__; // The symbol from ASM
 //---------------------------------------------------------------------------------
 int main(void)
 {
@@ -22,16 +19,17 @@ int main(void)
     // Initialize sound engine (take some time)
     spcBoot();
 
+
     // Initialize text console with our font
     //consoleSetTextMapPtr(0x6000);
     //consoleSetTextGfxPtr(0x3000);
     //consoleInitText(1, 16 * 2, &snesfont, &snespal);
     // Set give soundbank
-    spcSetBank(&SOUNDBANK__);
+  //  spcSetBank(&SOUNDBANK__);
     // allocate around 10K of sound ram (39 256-byte blocks)
     spcAllocateSoundRegion(39);
     // Load music
-    spcLoad(MOD_GESTATION);
+  //  spcLoad(MOD_WANPAK2);
     // Load sample
     //spcSetSoundEntry(15, 8, 6, &walksndend - &walksnd, &walksnd, &walksnd);
     //spcSetSoundEntry(15, 8, 6, &jumpsndend - &jumpsnd, &jumpsnd, &Jump);
@@ -51,8 +49,7 @@ int main(void)
     //bgInitTileSet(0, &UFTC_Cave, tileset_info[3].palette, 0, (tileset_info[stageTileset].size*32), 16 * 2, BG_16COLORS, 0x2000);
     bgSetMapPtr(1, 0x7000, SC_32x32);
 
-    spcPlay(0);
-    spcSetModuleVolume(100);
+
     /*
     // Draw a wonderful text :P
     // Put some text

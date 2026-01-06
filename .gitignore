@@ -26,6 +26,10 @@ linkfile
 *.ps
 soundbank.asm
 soundbank.h
+/res/**.h
+/res/**.asm
+
+!resources.h
 *.log
 
 # debug files

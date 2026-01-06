@@ -395,7 +395,6 @@ static void minimal_vsprintf(char *buf, const char *format, va_list ap) {
 
 // Console message function - writes formatted message to no$sns debug register
 void consoleNocashMessage(const char *format, ...) {
-    return;
     char text_buffer[64];
     va_list ap;
     

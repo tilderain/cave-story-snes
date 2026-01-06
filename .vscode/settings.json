@@ -6,6 +6,8 @@
 		"memory": "c",
 		"new": "c",
 		"snes_regs_xc.h": "c",
-		"data_converted.h": "c"
+		"data_converted.h": "c",
+		"snesmod.h": "c",
+		"audio_data.h": "c"
 	}
 }
