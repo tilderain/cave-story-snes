@@ -571,7 +571,7 @@ $(SOUNDBANK_ASM_WRAPPER): $(AUDIO_BNK_FILES)
 		i=$$((i+1)); \
 	done
 # 3. Assemble the wrapper into an object file
-$(BUILD_DIR)/soundbank_vasm.o: $(SOUNDBANK_ASM_WRAPPER)
+$(BUILD_DIR)/soundbank_vasm.o: $(SOUNDBANK_ASM_WRAPPER) $(AUDIO_BNK_FILES)
 	@mkdir -p $(BUILD_DIR)
 	@echo "Assembling Combined Soundbanks..."
 	$(AS) $(ASFLAGS) -o $@ $<
