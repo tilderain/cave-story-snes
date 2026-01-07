@@ -14,7 +14,8 @@ BUILD_DIR ?= build
 # AUDIO CONFIGURATION (SNESMOD)
 # =============================================================================
 
-SMCONV      := $(PVSNESLIB_HOME)/devkitsnes/tools/smconv
+SMCONV_DIR  := ./tools/smconv
+SMCONV      := $(SMCONV_DIR)/smconv
 
 # Automatically find all .it files in the res folder
 AUDIO_IT_FILES := $(wildcard res/*.it)
@@ -547,10 +548,12 @@ help:
 # Phony targets
 .PHONY: all clean wdc vbcc65816 calypsi llvm-mos cc65 jcc816 tcc816 info help
 
-
+$(SMCONV):
+	@echo "--- smconv tool not found. Building it now... ---"
+	$(MAKE) -C $(SMCONV_DIR)
 
 # 1. Run smconv to get the .bnk and .h (ignore the .asm it generates)
-res/%.bnk: res/%.it
+res/%.bnk: res/%.it $(SMCONV)
 	@echo "--- Converting $< to Soundbank ---"
 	$(SMCONV) $(SMCONVFLAGS) -o res/$* $<
 

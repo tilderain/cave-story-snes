@@ -4,8 +4,8 @@
 Work in progress SNES port of [Cave Story MD by andwn](https://github.com/andwn/cave-story-md)
 ## Compilation
 Build on linux for now
-1. Setup [vbcc](http://www.ibaug.de/vbcc/vbcc65816_r2.zip) and [PVSnesLib](https://github.com/alekmaul/pvsneslib/releases/tag/4.5.0)
-  - Make sure environment variables VBCC (pointing to the folder containing bin,config,targets), PVSNESLIB_HOME are setup and that vbcc/bin is in your PATH.
+1. Setup [vbcc](http://www.ibaug.de/vbcc/vbcc65816_r2.zip)
+  - Make sure environment variables VBCC (pointing to the folder containing bin,config,targets) are setup and that vbcc/bin is in your PATH.
 2. Clone & `make -j8;`
 ## License
 [flipphone22's compiler setup (MIT)](https://github.com/Phillip-May/snes-homebrew/blob/master/LICENSE)
@@ -15,7 +15,7 @@ Build on linux for now
 - flipphone22: Compiler & build setup
 - livvy94: Cave Story SNES Soundtrack
 - vbcc
-- PVSnesLib
+- PVSnesLib / SNESMOD
 - Pixel
 
 Cave Story MD thanks:
