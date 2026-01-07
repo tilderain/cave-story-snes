@@ -3,10 +3,9 @@
 
 Work in progress SNES port of [Cave Story MD by andwn](https://github.com/andwn/cave-story-md)
 ## Compilation
-Build on linux for now
 1. Setup [vbcc](http://www.ibaug.de/vbcc/vbcc65816_r2.zip)
   - Make sure environment variables VBCC (pointing to the folder containing bin,config,targets) are setup and that vbcc/bin is in your PATH.
-2. Clone & `make -j8;`
+2. Clone & `make -j8 COMPILER=vbcc65816`
 ## License
 [flipphone22's compiler setup (MIT)](https://github.com/Phillip-May/snes-homebrew/blob/master/LICENSE)
 [Cave Story MD (MIT and others)](https://github.com/andwn/cave-story-md/blob/master/doc/LICENSE.md)
