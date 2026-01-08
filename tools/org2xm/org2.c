@@ -1,13 +1,10 @@
 /*
-* Org2XM v2.2 (Nearest-Neighbor Resampling + Sustain Fix)
-* Converts Org songs from Cave Story to XM modules.
-* Public Domain.
+* Org2XM v3.2 (Drum Fix)
 * 
-* todo resample octaves individually (at 256 len ?)
-* Updates:
-* - v2.2: Resampling now uses Nearest-Neighbor (Decimation) on PCM data. No filtering.
-* - v2.1: Fixed Delta-decoding logic before resampling.
-* - v2.0: Fixed lingering notes (Explicit Note Offs).
+* Changes:
+* - Fixed Drums: Restored original unsigned->signed conversion logic (xor 0x80) in SBKload.
+* - Drums are NOT resampled; they are written as-is.
+* - Melody logic (Linear Load -> Resample -> Delta Write) preserved from v3.1.
 */
 
 #include <stdio.h>
@@ -24,6 +21,26 @@
 #define VOL 51  // default volume
 #define MAX_CHANNELS 8 
 #define MAX_BARS 2048   // Safe limit
+
+// --- User Provided Logic Structs ---
+typedef struct
+{
+    short wave_size;
+    short oct_par;
+    short oct_size;
+} OCTWAVE;
+
+OCTWAVE oct_wave[8] =
+{
+    { 256,  1,  4 }, // 0 Oct (Notes 0-11)
+    { 256,  2,  8 }, // 1 Oct (Notes 12-23)
+    { 128,  4, 12 }, // 2 Oct (Notes 24-35)
+    { 128,  8, 16 }, // 3 Oct (Notes 36-47)
+    {  64, 16, 20 }, // 4 Oct (Notes 48-59)
+    {  32, 32, 24 }, // 5 Oct (Notes 60-71)
+    {  16, 64, 28 }, // 6 Oct (Notes 72-83)
+    {   8,128, 32 }, // 7 Oct (Notes 84-95)
+};
 
 //////////////////////////////////////////////////////////////////////// Input
 #pragma pack(push,1)
@@ -95,6 +112,9 @@ int patLen[MAX_BARS];
 int pattern_map[MAX_BARS];      // Bar Index -> XM Pattern ID
 int source_bars[MAX_BARS];      // XM Pattern ID -> Original Bar Index
 
+// Mapping: [OrgSampleID][Octave 0-7] -> XM Instrument ID
+int waveInstMap[256][8];             
+
 int instruments;
 int tracks;
 int out_channels = 0;
@@ -128,7 +148,7 @@ struct XMHeader
     uint16_t bpm;
     uint8_t patternOrder[256];
 } PACKED xmh = {
-    "Extended Module: ", "", 0x1A, "Org2XM v2.2 NoFilter", 0x104, 0x114
+    "Extended Module: ", "", 0x1A, "Org2XM v3.2 DrFix", 0x104, 0x114
 };
 
 struct XMInstrument
@@ -165,8 +185,8 @@ struct SoundBank
     uint16_t lenMelo;
     uint32_t *tblLenDrum;
     char (*tblNameDrum)[22];
-    int8_t *melody;
-    int8_t *drums;
+    int8_t *melody; // Linear PCM 
+    int8_t *drums;  // Delta encoded (standard XM)
     uint32_t *tblOffDrum;
     uint32_t lenAllDrm;
 } sbank;
@@ -211,15 +231,17 @@ int SBKload(char *path)
     read(sbank.drums, sbank.lenAllDrm * 1);
 
     int8_t *buf;
-    // CONVERT TO DELTA (XM FORMAT)
-    for (i = 0 ; i < sbank.snumMelo; i++) {
-        buf = &sbank.melody[i * sbank.lenMelo];
-        for (j = sbank.lenMelo - 1; j > 0; --j) buf[j] -= buf[j - 1];
-    }
+    
+    // MELODY: Keep Linear. Do nothing.
+    // (Previous versions incorrectly applied delta loop here for melody).
+
+    // DRUMS: Restore original processing logic.
+    // 1. Convert to Delta.
+    // 2. XOR first byte (0x80) to fix Signed/Unsigned offset.
     for (i = 0 ; i < sbank.snumDrum; i++) {
         buf = &sbank.drums[sbank.tblOffDrum[i]];
         for (j = sbank.tblLenDrum[i] - 1; j > 0; --j) buf[j] -= buf[j - 1];
-        buf[0] ^= 0x80;
+        buf[0] ^= 0x80; // FIX: This line was missing in previous update
     }
     fclose(f); return 0;
 }
@@ -263,8 +285,9 @@ void encode(int i, int ch, int j)
 
         wInst = !chState[ch].played; 
         if (chState[ch].lastInputTrack != i) wInst = 1;
-        if (compatibility) wInst = 1;
         
+        wInst = 1;
+
         wFine = !!finetune;
         resetPanVol();
 
@@ -305,32 +328,6 @@ int main(int argc, char** argv)
 
     int ret = SBKload(argc < 3 ? "ORG210EN.DAT" : argv[2]);
     if (ret) return ret;
-
-    // --- RESAMPLING 256 -> 128 (Nearest Neighbor) ---
-    // This reduces the sample size by half, allowing the SNES to play notes
-    // one octave higher than before without hitting the 32kHz hardware limit.
-    if (sbank.lenMelo == 256) {
-        printf("Info: Resampling melody samples to 128 bytes (Nearest-Neighbor)...\n");
-        for (i = 0; i < sbank.snumMelo; i++) {
-            int8_t *buf = &sbank.melody[i * 256];
-            
-            // 1. Reconstruct PCM (Undo Delta from SBKload)
-            // SBKload: buf[j] -= buf[j-1]. Inverse: buf[j] += buf[j-1]
-            for (j = 1; j < 256; j++) buf[j] += buf[j - 1];
-
-            // 2. Resample (Nearest Neighbor)
-            // Just take every 2nd sample.
-            // Since we write to i*128 and read from i*256, we never overwrite unread data.
-            int8_t *dst = &sbank.melody[i * 128]; 
-            for(j=0; j<128; j++) {
-                dst[j] = buf[j*2]; 
-            }
-
-            // 3. Re-apply Delta Encoding (For XM)
-            for (j = 127; j > 0; --j) dst[j] -= dst[j - 1];
-        }
-        sbank.lenMelo = 128;
-    }
 
     if (!(f = fopen(argv[1], "rb"))) return 2;
     read(&header, sizeof(struct OrgHeader));
@@ -546,15 +543,35 @@ int main(int argc, char** argv)
         t[i].finetune = bestFinetune;
     }
 
+    // --- ASSIGN INSTRUMENT IDs ---
     for (i=0; i<tracks; ++i) t[i].instrument = i;
     for (i=0; i<tracks; ++i) if (t[i].instrument == i)
     for (j=i+1; j<tracks; ++j)
     if (t[j].sample == t[i].sample && t[j].finetune == t[i].finetune && t[j].noLoop == t[i].noLoop)
     t[j].instrument = i;
 
-    for (instruments=0, i=0; i<tracks; ++i) {
-        if (t[i].instrument == i) t[i].instrument = ++instruments;
-        else t[i].instrument = t[t[i].instrument].instrument;
+    memset(waveInstMap, 0, sizeof(waveInstMap));
+    instruments = 0;
+    
+    for(i=0; i<tracks; ++i) {
+        if(t[i].instrument == i) {
+            if (t[i].drum) {
+                instruments++;
+                for(int o=0; o<8; o++) waveInstMap[i][o] = instruments;
+            } else {
+                for(int o=0; o<8; o++) {
+                    instruments++;
+                    waveInstMap[i][o] = instruments;
+                }
+            }
+        }
+    }
+
+    for(i=0; i<tracks; ++i) {
+        if(t[i].instrument != i) {
+            int master = t[i].instrument;
+            for(int o=0; o<8; o++) waveInstMap[i][o] = waveInstMap[master][o];
+        }
     }
 
     // --- PATTERNS ---
@@ -572,15 +589,13 @@ int main(int argc, char** argv)
             int input_trk = track_layout[i * rows + j];
             
             if (input_trk == -1) {
-                // EXPLICIT CUT LOGIC: If we were playing something, kill it.
                 if (chState[i].lastInputTrack != -1 && chState[i].lastVol > 0) {
                      int prev = chState[i].lastInputTrack;
                      if (!t[prev].drum || !t[prev].noLoop) {
-                         wKey = 1; key = 0x60; // Key Off (Note 97)
+                         wKey = 1; key = 0x60;
                      } else {
                          wKey = 0;
                      }
-                     // Reset state
                      chState[i].lastInputTrack = -1; 
                      chState[i].lastVol = 0;
                      chState[i].played = 0; 
@@ -594,10 +609,27 @@ int main(int argc, char** argv)
                  encode(input_trk, i, j);
             }
 
+            int final_inst = 0;
+            if (wInst || wKey) {
+                int oct = 0;
+                if (t[input_trk].drum) {
+                    oct = 0;
+                } else {
+                    if (key != 0x60) {
+                        oct = key / 12;
+                        if (oct < 0) oct = 0;
+                        if (oct > 7) oct = 7;
+                    } else {
+                        oct = 0; 
+                    }
+                }
+                final_inst = waveInstMap[input_trk][oct];
+            }
+            
             uint8_t p = 0x80 | wKey | wInst*2 | (wVol||wPanVol)*4 | (wPan||wSkip||wFine)*24;
             if (p != 0x9F) buf[len++] = p;
-            if (wKey) buf[len++] = key+1;
-            if (wInst) buf[len++] = t[input_trk].instrument;
+            if (wKey) buf[len++] = key+1; 
+            if (wInst) buf[len++] = final_inst; 
             if (wVol) buf[len++] = 0x10 + n[input_trk][j].vol;
             else if (wPanVol) buf[len++] = 0xC0 + (n[input_trk][j].pan>0x77 ? 0xF : n[input_trk][j].pan+0x88>>4);
 
@@ -655,28 +687,78 @@ int main(int argc, char** argv)
         write(pat[src], patLen[src]);
     }
 
-    for (k=1, i=0; i<tracks; ++i) if (t[i].instrument == k) {
-        int8_t *sbuf;
-        sprintf(smp.sampleName, "samples/%03d.wav", t[i].sample);
-        smp.loopStart = 0; smp.finetune = t[i].finetune;
-        memset(smp.instrumentName, 0, 22);
+    // --- WRITE INSTRUMENTS ---
+    for (i=0; i<tracks; ++i) {
+        if (t[i].instrument != i) continue;
+
         if (t[i].drum) {
+            // -- DRUMS --
+            // Logic restored to simple write (SBKload handled quirks)
+            int8_t *sbuf;
             uint8_t dsmp = t[i].sample - 100;
             sbuf = &sbank.drums[sbank.tblOffDrum[dsmp]];
-            smp.type = 0; smp.loopLength = 0; smp.sampleLength = sbank.tblLenDrum[dsmp];
-            strcpy(smp.instrumentName, sbank.tblNameDrum[dsmp]); smp.relativeKey = 12;
-        } else {
-            sbuf = &sbank.melody[t[i].sample * sbank.lenMelo];
-            smp.type = 1; smp.loopLength = sbank.lenMelo; smp.sampleLength = sbank.lenMelo;
-            sprintf(smp.instrumentName, t[i].freqShift==1000 ? "Melody%02d" : "Melody%02d %+d Hz", t[i].sample, t[i].freqShift-1000);
             
-            // --- FIX FOR 128 BYTE SAMPLES ---
-            // If lenMelo is 128 (1 octave higher native pitch), we set relativeKey to 36 (C-3)
-            // instead of 48 (C-4) to compensate.
-            if (sbank.lenMelo == 128) smp.relativeKey = 36;
-            else smp.relativeKey = 48; // Standard 256 bytes
+            smp.type = 0; 
+            smp.loopLength = 0; 
+            smp.sampleLength = sbank.tblLenDrum[dsmp];
+            smp.loopStart = 0; 
+            smp.finetune = t[i].finetune;
+            smp.relativeKey = 12; 
+            memset(smp.instrumentName, 0, 22);
+            strcpy(smp.instrumentName, sbank.tblNameDrum[dsmp]); 
+
+            write(&smp, sizeof(struct XMInstrument)); 
+            write(sbuf, smp.sampleLength);
+        } else {
+            // -- MELODY (Write 8 Variations) --
+            // sbank.melody is now LINEAR PCM (Corrected SBKload)
+            int8_t *src_pcm = &sbank.melody[t[i].sample * sbank.lenMelo];
+            
+            for(int o=0; o<8; o++) {
+                int wave_size = oct_wave[o].wave_size;
+                int data_size = wave_size; 
+
+                int8_t *dst_buf = malloc(data_size);
+                
+                unsigned long wav_tp = 0;
+                unsigned long step = 0x100 / wave_size;
+
+                int8_t prev = 0;
+                for(int x=0; x<data_size; x++) {
+                    int index = wav_tp & 0xFF; // Wrap index to 256
+                    
+                    int8_t val = src_pcm[index];
+                    
+                    // Convert Linear to Delta for XM
+                    dst_buf[x] = val - prev;
+                    prev = val;
+                    
+                    wav_tp += step;
+                }
+
+                smp.type = 1; 
+                smp.loopStart = 0;
+                smp.finetune = t[i].finetune;
+                smp.sampleLength = data_size;
+                smp.loopLength = data_size;
+                
+                int shift = 0;
+                if (wave_size == 128) shift = 12;
+                if (wave_size == 64)  shift = 24;
+                if (wave_size == 32)  shift = 36;
+                if (wave_size == 16)  shift = 48;
+                if (wave_size == 8)   shift = 60;
+                
+                smp.relativeKey = 48 - shift;
+
+                sprintf(smp.instrumentName, "Mel%02d-Oct%d", t[i].sample, o);
+                
+                write(&smp, sizeof(struct XMInstrument)); 
+                write(dst_buf, smp.sampleLength);
+                
+                free(dst_buf);
+            }
         }
-        write(&smp, sizeof(struct XMInstrument)); write(sbuf, smp.sampleLength); ++k;
     }
 
     fclose(g);
