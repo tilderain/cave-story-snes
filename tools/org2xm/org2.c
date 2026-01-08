@@ -1,10 +1,10 @@
 /*
-* Org2XM v3.2 (Drum Fix)
+* Org2XM v3.3 (2-Octave Splits)
 * 
 * Changes:
-* - Fixed Drums: Restored original unsigned->signed conversion logic (xor 0x80) in SBKload.
-* - Drums are NOT resampled; they are written as-is.
-* - Melody logic (Linear Load -> Resample -> Delta Write) preserved from v3.1.
+* - Resamples every 2 Octaves (Notes 0-23, 24-47, 48-71, 72-95).
+* - Reduces instrument count (4 per melody track).
+* - Sample Sizes: 256, 128, 64, 16.
 */
 
 #include <stdio.h>
@@ -30,16 +30,13 @@ typedef struct
     short oct_size;
 } OCTWAVE;
 
-OCTWAVE oct_wave[8] =
+// Modified for 2-Octave Splits (4 entries)
+OCTWAVE oct_wave[4] =
 {
-    { 256,  1,  4 }, // 0 Oct (Notes 0-11)
-    { 256,  2,  8 }, // 1 Oct (Notes 12-23)
-    { 128,  4, 12 }, // 2 Oct (Notes 24-35)
-    { 128,  8, 16 }, // 3 Oct (Notes 36-47)
-    {  64, 16, 20 }, // 4 Oct (Notes 48-59)
-    {  32, 32, 24 }, // 5 Oct (Notes 60-71)
-    {  16, 64, 28 }, // 6 Oct (Notes 72-83)
-    {   8,128, 32 }, // 7 Oct (Notes 84-95)
+    { 256,  1,  4 }, // Split 0: Oct 0-1 (Notes 0-23)
+    { 128,  4, 12 }, // Split 1: Oct 2-3 (Notes 24-47)
+    {  64, 16, 20 }, // Split 2: Oct 4-5 (Notes 48-71)
+    {  16, 64, 28 }, // Split 3: Oct 6-7 (Notes 72-95)
 };
 
 //////////////////////////////////////////////////////////////////////// Input
@@ -112,8 +109,8 @@ int patLen[MAX_BARS];
 int pattern_map[MAX_BARS];      // Bar Index -> XM Pattern ID
 int source_bars[MAX_BARS];      // XM Pattern ID -> Original Bar Index
 
-// Mapping: [OrgSampleID][Octave 0-7] -> XM Instrument ID
-int waveInstMap[256][8];             
+// Mapping: [OrgSampleID][Split 0-3] -> XM Instrument ID
+int waveInstMap[256][4];             
 
 int instruments;
 int tracks;
@@ -148,7 +145,7 @@ struct XMHeader
     uint16_t bpm;
     uint8_t patternOrder[256];
 } PACKED xmh = {
-    "Extended Module: ", "", 0x1A, "Org2XM v3.2 DrFix", 0x104, 0x114
+    "Extended Module: ", "", 0x1A, "Org2XM v3.3 2Oct", 0x104, 0x114
 };
 
 struct XMInstrument
@@ -232,16 +229,13 @@ int SBKload(char *path)
 
     int8_t *buf;
     
-    // MELODY: Keep Linear. Do nothing.
-    // (Previous versions incorrectly applied delta loop here for melody).
-
-    // DRUMS: Restore original processing logic.
-    // 1. Convert to Delta.
-    // 2. XOR first byte (0x80) to fix Signed/Unsigned offset.
+    // MELODY: Keep Linear. 
+    
+    // DRUMS: Delta + Unsigned Fix
     for (i = 0 ; i < sbank.snumDrum; i++) {
         buf = &sbank.drums[sbank.tblOffDrum[i]];
         for (j = sbank.tblLenDrum[i] - 1; j > 0; --j) buf[j] -= buf[j - 1];
-        buf[0] ^= 0x80; // FIX: This line was missing in previous update
+        buf[0] ^= 0x80;
     }
     fclose(f); return 0;
 }
@@ -286,7 +280,7 @@ void encode(int i, int ch, int j)
         wInst = !chState[ch].played; 
         if (chState[ch].lastInputTrack != i) wInst = 1;
         
-        wInst = 1;
+        wInst = 1; // Force for retrigger logic
 
         wFine = !!finetune;
         resetPanVol();
@@ -300,7 +294,6 @@ void encode(int i, int ch, int j)
 
         if (wVol && !n[i][j].vol) {
             wVol = wPan = wFine = 0;
-            // Force Key Off for melody instruments to prevent infinite sustain
             if (!t[i].drum || !t[i].noLoop) { wKey = 1; key = 0x60; }
             chState[ch].lastVol = 0;
         }
@@ -457,7 +450,6 @@ int main(int argc, char** argv)
         NoteEvent *e = &evList[i];
         int best_ch = -1;
         
-        // 1. Perfect Fit
         for(int ch=0; ch<MAX_CHANNELS; ch++) {
             int collision = 0;
             for(int k=e->start_row; k <= e->end_row; k++) {
@@ -466,7 +458,6 @@ int main(int argc, char** argv)
             if(!collision) { best_ch = ch; break; }
         }
 
-        // 2. Sustain Stealing
         if (best_ch == -1) {
             for(int ch=0; ch<MAX_CHANNELS; ch++) {
                 if (layout_is_attack[ch*rows + e->start_row]) continue;
@@ -480,7 +471,6 @@ int main(int argc, char** argv)
             }
         }
 
-        // 3. Truncation Fitting
         if (best_ch == -1) {
             int max_len = 0;
             int best_trunc_ch = -1;
@@ -553,13 +543,14 @@ int main(int argc, char** argv)
     memset(waveInstMap, 0, sizeof(waveInstMap));
     instruments = 0;
     
+    // Allocate 4 instruments per Melody track (or 1 per Drum)
     for(i=0; i<tracks; ++i) {
         if(t[i].instrument == i) {
             if (t[i].drum) {
                 instruments++;
-                for(int o=0; o<8; o++) waveInstMap[i][o] = instruments;
+                for(int o=0; o<4; o++) waveInstMap[i][o] = instruments;
             } else {
-                for(int o=0; o<8; o++) {
+                for(int o=0; o<4; o++) {
                     instruments++;
                     waveInstMap[i][o] = instruments;
                 }
@@ -570,7 +561,7 @@ int main(int argc, char** argv)
     for(i=0; i<tracks; ++i) {
         if(t[i].instrument != i) {
             int master = t[i].instrument;
-            for(int o=0; o<8; o++) waveInstMap[i][o] = waveInstMap[master][o];
+            for(int o=0; o<4; o++) waveInstMap[i][o] = waveInstMap[master][o];
         }
     }
 
@@ -616,9 +607,10 @@ int main(int argc, char** argv)
                     oct = 0;
                 } else {
                     if (key != 0x60) {
-                        oct = key / 12;
+                        // 24 semitones = 2 octaves
+                        oct = key / 24;
                         if (oct < 0) oct = 0;
-                        if (oct > 7) oct = 7;
+                        if (oct > 3) oct = 3; // Clamp to 4 entries
                     } else {
                         oct = 0; 
                     }
@@ -643,7 +635,6 @@ int main(int argc, char** argv)
 
     // Deduplication
     int unique_patterns = 0;
-    
     for(i=0; i<MAX_BARS; i++) pattern_map[i] = -1;
 
     for(i=0; i<bars; i++) {
@@ -655,7 +646,6 @@ int main(int argc, char** argv)
                  break;
              }
         }
-        
         if(found != -1) {
             pattern_map[i] = found;
         } else {
@@ -693,7 +683,6 @@ int main(int argc, char** argv)
 
         if (t[i].drum) {
             // -- DRUMS --
-            // Logic restored to simple write (SBKload handled quirks)
             int8_t *sbuf;
             uint8_t dsmp = t[i].sample - 100;
             sbuf = &sbank.drums[sbank.tblOffDrum[dsmp]];
@@ -710,11 +699,10 @@ int main(int argc, char** argv)
             write(&smp, sizeof(struct XMInstrument)); 
             write(sbuf, smp.sampleLength);
         } else {
-            // -- MELODY (Write 8 Variations) --
-            // sbank.melody is now LINEAR PCM (Corrected SBKload)
+            // -- MELODY (Write 4 Variations) --
             int8_t *src_pcm = &sbank.melody[t[i].sample * sbank.lenMelo];
             
-            for(int o=0; o<8; o++) {
+            for(int o=0; o<4; o++) {
                 int wave_size = oct_wave[o].wave_size;
                 int data_size = wave_size; 
 
@@ -729,7 +717,7 @@ int main(int argc, char** argv)
                     
                     int8_t val = src_pcm[index];
                     
-                    // Convert Linear to Delta for XM
+                    // Convert Linear to Delta
                     dst_buf[x] = val - prev;
                     prev = val;
                     
@@ -742,6 +730,7 @@ int main(int argc, char** argv)
                 smp.sampleLength = data_size;
                 smp.loopLength = data_size;
                 
+                // RelKey calculation based on size
                 int shift = 0;
                 if (wave_size == 128) shift = 12;
                 if (wave_size == 64)  shift = 24;
@@ -751,7 +740,7 @@ int main(int argc, char** argv)
                 
                 smp.relativeKey = 48 - shift;
 
-                sprintf(smp.instrumentName, "Mel%02d-Oct%d", t[i].sample, o);
+                sprintf(smp.instrumentName, "Mel%02d-Oct%d", t[i].sample, o*2);
                 
                 write(&smp, sizeof(struct XMInstrument)); 
                 write(dst_buf, smp.sampleLength);
