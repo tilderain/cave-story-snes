@@ -207,19 +207,68 @@ public:
         }
     }
 
-    bool load_and_init(const char* filename) {
+bool load_and_init(const char* filename) {
+        printf("[DEBUG] Attempting to open: %s\n", filename);
+
         FILE* f = fopen(filename, "rb");
-        if (!f) return false;
-        fseek(f, 0, SEEK_END); long size = ftell(f); fseek(f, 0, SEEK_SET);
-        file_mem.resize(size); fread(file_mem.data(), 1, size, f); fclose(f);
+        if (!f) {
+            printf("[DEBUG] ERROR: Could not open file (fopen failed). Check path or permissions.\n");
+            return false;
+        }
+
+        fseek(f, 0, SEEK_END); 
+        long size = ftell(f); 
+        fseek(f, 0, SEEK_SET);
+
+        if (size <= 0) {
+            printf("[DEBUG] ERROR: File is empty or size is invalid (size: %ld).\n", size);
+            fclose(f);
+            return false;
+        }
+
+        file_mem.resize(size); 
+        size_t read_count = fread(file_mem.data(), 1, size, f); 
+        fclose(f);
+
+        if (read_count != (size_t)size) {
+            printf("[DEBUG] ERROR: Read size mismatch. Expected %ld, got %zu.\n", size, read_count);
+            return false;
+        }
+
         patch_memory();
 
-        if (pxtn->init() != pxtnOK) return false;
+        pxtnERR pxtn_res = pxtn->init();
+        if (pxtn_res != pxtnOK) {
+            printf("[DEBUG] ERROR: pxtnService init failed. Code: %d\n", pxtn_res);
+            return false;
+        }
+
         pxtn->set_destination_quality(2, 44100);
+        
         pxtnDescriptor desc;
-        if (!desc.set_memory_r(file_mem.data(), size)) return false;
-        if (pxtn->read(&desc) != pxtnOK) return false;
-        if (pxtn->tones_ready() != pxtnOK) return false;
+        if (!desc.set_memory_r(file_mem.data(), size)) {
+            printf("[DEBUG] ERROR: pxtnDescriptor failed to set memory.\n");
+            return false;
+        }
+
+        // Try to read the project
+        pxtn_res = pxtn->read(&desc);
+        if (pxtn_res != pxtnOK) {
+            printf("[DEBUG] ERROR: pxtnService read failed. Code: %d\n", pxtn_res);
+            printf("        Common causes:\n");
+            printf("        - pxtnERR_fmt_new: File version is newer than this library supports.\n");
+            printf("        - pxtnERR_fmt_unknown: Not a valid ptcop file.\n");
+            return false;
+        }
+
+        // Decode samples (Voice/Wave generation)
+        pxtn_res = pxtn->tones_ready();
+        if (pxtn_res != pxtnOK) {
+            printf("[DEBUG] ERROR: pxtnService tones_ready failed. Code: %d\n", pxtn_res);
+            printf("        This usually means a sample/voice could not be decoded.\n");
+            return false;
+        }
+
         return true;
     }
 
@@ -232,7 +281,7 @@ public:
         int32_t beat_num, beat_clock, meas_num;
         float beat_tempo;
         pxtn->master->Get(&beat_num, &beat_tempo, &beat_clock, &meas_num);
-        int rows_per_beat = 8; // High resolution
+        int rows_per_beat = 4; // High resolution
         int ticks_per_row = beat_clock / rows_per_beat; 
         if (ticks_per_row < 1) ticks_per_row = 1;
         
@@ -568,7 +617,7 @@ public:
             }
         }
 
-        write_xm_file(out_filename, num_patterns, MAX_XM_CHANNELS, instruments, patterns, beat_tempo/2);
+        write_xm_file(out_filename, num_patterns, MAX_XM_CHANNELS, instruments, patterns, beat_tempo);
     }
 
 private:
@@ -579,7 +628,7 @@ private:
         // Pxtone X coords can be very large. We must scale them to XM ticks.
         // Assuming high-res output, a divisor of 4 to 8 is safe to preserve shape without being too slow.
         // If notes sound silent/delayed, increase this check or divisor logic.
-        int time_scale_div = 4; 
+        int time_scale_div = 8; 
 
         if ((unit->envelope.head_num > 0 || unit->envelope.body_num > 0) || has_env) {
             ps.env_enabled = true;
