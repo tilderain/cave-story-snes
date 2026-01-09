@@ -11,6 +11,30 @@
 
 #include "snesmod.h"
 
+
+__section("header") const struct cart_header {
+ char title[21];
+ char mode;
+ char chipset;
+ char ROM_size;
+ char RAM_size;
+ char country;
+ char dev_id;
+ char version;
+ int checksum_compl;
+ int checksum;
+} __header_hirom_ntsc = {"CAVE STORY SAMPLE", 
+0x31, //FASTROM - HIROM
+0, 
+12, 
+7, 
+0, 
+0, 
+0, 
+0, 
+0};
+
+
 //---------------------------------------------------------------------------------
 int main(void)
 {
