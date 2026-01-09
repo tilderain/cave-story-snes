@@ -1,10 +1,12 @@
 /*
-* ptcop2xm (Octave Resampling - Every 2 Octaves)
+* ptcop2xm (Dynamic Smart Resampling)
 * 
-* Changes:
-* - Reduces Instrument count by merging pairs of Octaves.
-* - 4 Variations per Voice (Oct 0-1, 2-3, 4-5, 6-7).
-* - Max Pxtone Voices increased to 32 (within XM 128 limit).
+* Logic:
+* - Scans song to find active note ranges for every voice.
+* - "Single Mode": If usage range <= 1 Octave, generate 1 High-Quality Instrument (No Resample).
+* - "Multi Mode": If usage range > 1 Octave, generate split instruments for active groups only.
+* - Groups: 0 (Oct 0-1), 1 (Oct 2-3), 2 (Oct 4-5), 3 (Oct 6-7).
+* - Calculates correct mapping so pattern data points to the generated XM IDs.
 */
 
 #include <stdio.h>
@@ -17,32 +19,27 @@
 #include <map>
 #include <algorithm>
 
-// Include the Pxtone headers
 #include "pxtnService.h"
 #include "pxtnError.h"
 
 // --- Resampling Logic Structures ---
 typedef struct
 {
-    short divisor;   // Downsampling factor (1, 2, 4, 8)
-    short shift;     // Pitch shift correction in semitones
+    short divisor;   // Downsampling factor
+    short shift;     // Pitch shift correction
 } OCTWAVE;
 
-// New Table: 4 Entries (Covering 2 Octaves each)
-// Index 0: Octaves 0 & 1
-// Index 1: Octaves 2 & 3
-// Index 2: Octaves 4 & 5
-// Index 3: Octaves 6 & 7
+// Table: 4 Entries (Covering 2 Octaves each)
 OCTWAVE oct_wave[4] =
 {
-    { 1,  0 }, // Oct 0-1: Full Size
-    { 2, 12 }, // Oct 2-3: Half Size (+1 Octave Shift)
-    { 4, 24 }, // Oct 4-5: Quarter Size (+2 Octave Shift)
-    { 8, 36 }  // Oct 6-7: Eighth Size (+3 Octave Shift)
+    { 1,  0 }, // Group 0: Oct 0-1 (Full Size)
+    { 2, 12 }, // Group 1: Oct 2-3 (Half Size)
+    { 4, 24 }, // Group 2: Oct 4-5 (Quarter Size)
+    { 8, 36 }  // Group 3: Oct 6-7 (Eighth Size)
 };
 
 // ====================================================================================
-// XM STRUCTURES (FastTracker 2 Format)
+// XM STRUCTURES
 // ====================================================================================
 #pragma pack(push, 1)
 
@@ -133,13 +130,27 @@ struct GridCell {
     uint8_t param = 0;
 };
 
+// Analysis Struct
+struct VoiceStats {
+    int32_t min_key;
+    int32_t max_key;
+    bool used;
+    bool group_used[4]; // Tracks usage of specific octave groups
+    
+    VoiceStats() {
+        min_key = 2147483647;
+        max_key = -2147483647;
+        used = false;
+        for(int i=0; i<4; i++) group_used[i] = false;
+    }
+};
+
 // ====================================================================================
 // CONVERTER LOGIC
 // ====================================================================================
 
 uint8_t pxtn_key_to_xm(int32_t key) {
     double semitones = key / 256.0;
-    // C4 (Middle C) in XM is Note 49. Pxtone 0x6000 (24576) is Middle C.
     int note = (int)(semitones) - 47; 
     if (note < 1) note = 1;
     if (note > 96) note = 96;
@@ -174,7 +185,6 @@ public:
         for (size_t i = 0; i < file_mem.size() - 8; i++) {
             if (memcmp(&file_mem[i], target, 8) == 0) {
                 memcpy(&file_mem[i], replace, 8);
-                printf("[INFO] Patched OGG chunk at offset %zu.\n", i);
             }
         }
     }
@@ -182,42 +192,79 @@ public:
     bool load_and_init(const char* filename) {
         FILE* f = fopen(filename, "rb");
         if (!f) return false;
-
         fseek(f, 0, SEEK_END);
         long size = ftell(f);
         fseek(f, 0, SEEK_SET);
-
         file_mem.resize(size);
         fread(file_mem.data(), 1, size, f);
         fclose(f);
-
         patch_memory();
 
-        pxtnERR res = pxtn->init();
-        if (res != pxtnOK) { printf("Init Error: %d\n", res); return false; }
-
+        if (pxtn->init() != pxtnOK) return false;
         pxtn->set_destination_quality(2, 44100);
-
         pxtnDescriptor desc;
         if (!desc.set_memory_r(file_mem.data(), size)) return false;
-
-        res = pxtn->read(&desc);
-        if (res != pxtnOK) { printf("Read Error: %d\n", res); return false; }
-
-        res = pxtn->tones_ready();
-        if (res != pxtnOK) { printf("Tones Ready Error: %d\n", res); return false; }
-
+        if (pxtn->read(&desc) != pxtnOK) return false;
+        if (pxtn->tones_ready() != pxtnOK) return false;
         return true;
     }
 
     void export_xm(const char* out_filename) {
-        // --- 1. Export Instruments (4 Variations per Voice) ---
-        std::vector<ParsedSample> instruments;
         int woice_count = pxtn->Woice_Num();
+        int num_channels = pxtn->Unit_Num();
+        const pxtnEvelist* evels = pxtn->evels;
+
+        // =========================================================================
+        // PASS 1: ANALYZE USAGE
+        // =========================================================================
+        std::vector<VoiceStats> v_stats(woice_count);
+        std::vector<int> unit_current_woice(num_channels, 0);
+
+        // Pre-scan events
+        for (const EVERECORD* e = evels->get_Records(); e != NULL; e = e->next) {
+            if (e->unit_no >= num_channels) continue;
+            
+            if (e->kind == EVENTKIND_VOICENO) {
+                unit_current_woice[e->unit_no] = e->value;
+            }
+            else if (e->kind == EVENTKIND_KEY) {
+                int w = unit_current_woice[e->unit_no];
+                if (w < woice_count) {
+                    v_stats[w].used = true;
+                    if (e->value < v_stats[w].min_key) v_stats[w].min_key = e->value;
+                    if (e->value > v_stats[w].max_key) v_stats[w].max_key = e->value;
+                    
+                    // Determine Group (1-96 in XM)
+                    uint8_t note = pxtn_key_to_xm(e->value);
+                    int oct = (note - 1) / 12;
+                    if (oct < 0) oct = 0;
+                    if (oct > 7) oct = 7;
+                    int group = oct / 2;
+                    v_stats[w].group_used[group] = true;
+                }
+            }
+        }
+
+        // =========================================================================
+        // PASS 2: GENERATE INSTRUMENTS
+        // =========================================================================
+        std::vector<ParsedSample> instruments;
         
+        // Map [PxtoneID][OctGroup] -> XM Instrument Index (1-based)
+        // Note: For Single Mode, all groups map to the same index.
+        std::vector<std::vector<int>> xm_inst_map(woice_count, std::vector<int>(4, 0));
+        
+        int xm_inst_counter = 1;
+
         for (int i = 0; i < woice_count; i++) {
+            if (!v_stats[i].used) continue; // Skip unused voices entirely
+
             const pxtnWoice* woice = pxtn->Woice_Get(i);
             
+            // Logic: Single Mode vs Multi Mode
+            int range = v_stats[i].max_key - v_stats[i].min_key;
+            bool single_mode = (range <= 3072); // <= 1 Octave (12 semitones * 256)
+
             int name_len = 0;
             std::string base_name;
             const char* name_ptr = woice->get_name_buf(&name_len);
@@ -241,24 +288,26 @@ public:
                 }
             }
 
-            // Create 4 Variations (0=Low, 3=High)
-            for(int g = 0; g < 4; g++) {
+            if (single_mode) {
+                // --- SINGLE MODE: 1 Instrument, Full Quality ---
                 ParsedSample ps;
                 ps.pxtn_id = i;
-                ps.oct_group = g;
-                ps.name = base_name;
+                ps.oct_group = 0; // Nominal group 0, but acts as universal
+                ps.name = base_name; // No suffix needed, or maybe "-HQ"
                 ps.env_enabled = false;
-
+                
+                // Copy Envelope Logic
                 if (has_sample) {
                     ps.basic_key = unit->basic_key;
                     ps.flags = unit->voice_flags;
+                    ps.data_16 = original_mono; // Divisor 1
 
+                    // Envelope parsing...
                     if (unit->envelope.head_num > 0 || unit->envelope.body_num > 0) {
                         ps.env_enabled = true;
                         int cur_x = 0;
                         int count = unit->envelope.head_num + unit->envelope.body_num + unit->envelope.tail_num;
                         if (count > 12) count = 12; 
-
                         for (int k = 0; k < count; k++) {
                             cur_x += unit->envelope.points[k].x;
                             int y = unit->envelope.points[k].y / 2;
@@ -266,62 +315,101 @@ public:
                             ps.env_points.push_back((uint16_t)cur_x);
                             ps.env_points.push_back((uint16_t)y);
                         }
-                        
                         if (unit->envelope.tail_num > 0)
                             ps.env_sustain = unit->envelope.head_num + unit->envelope.body_num - 1;
                         else
                             ps.env_sustain = (ps.env_points.size()/2) - 1;
                         if(ps.env_sustain < 0) ps.env_sustain = 0;
                     }
+                }
+                
+                instruments.push_back(ps);
+                
+                // Map ALL groups to this single instrument
+                for(int g=0; g<4; g++) xm_inst_map[i][g] = xm_inst_counter;
+                xm_inst_counter++;
 
-                    // --- OCTAVE RESAMPLING (Every 2 Octaves) ---
-                    int divisor = oct_wave[g].divisor;
-                    
-                    if (divisor == 1) {
-                        ps.data_16 = original_mono;
-                    } else {
-                        // Nearest Neighbor Downsampling
-                        int src_len = original_mono.size();
-                        int dst_len = src_len / divisor;
-                        if (dst_len < 2) dst_len = 2;
+                printf("[INFO] Voice %d: Single Mode (Range %d). Mapped to ID %d.\n", i, range, xm_inst_counter-1);
+
+            } else {
+                // --- MULTI MODE: Dynamic Split ---
+                // Only generate for used groups
+                for(int g = 0; g < 4; g++) {
+                    if (!v_stats[i].group_used[g]) continue; // Skip unused groups
+
+                    ParsedSample ps;
+                    ps.pxtn_id = i;
+                    ps.oct_group = g;
+                    ps.name = base_name;
+                    ps.env_enabled = false;
+
+                    if (has_sample) {
+                        ps.basic_key = unit->basic_key;
+                        ps.flags = unit->voice_flags;
                         
-                        ps.data_16.resize(dst_len);
-                        
-                        double step = (double)src_len / (double)dst_len;
-                        double pos = 0.0;
-                        
-                        for(int k=0; k<dst_len; k++) {
-                            int idx = (int)pos;
-                            if(idx >= src_len) idx = src_len - 1;
-                            ps.data_16[k] = original_mono[idx];
-                            pos += step;
+                        // Envelope parsing...
+                        if (unit->envelope.head_num > 0 || unit->envelope.body_num > 0) {
+                            ps.env_enabled = true;
+                            int cur_x = 0;
+                            int count = unit->envelope.head_num + unit->envelope.body_num + unit->envelope.tail_num;
+                            if (count > 12) count = 12; 
+                            for (int k = 0; k < count; k++) {
+                                cur_x += unit->envelope.points[k].x;
+                                int y = unit->envelope.points[k].y / 2;
+                                if (y > 64) y = 64;
+                                ps.env_points.push_back((uint16_t)cur_x);
+                                ps.env_points.push_back((uint16_t)y);
+                            }
+                            if (unit->envelope.tail_num > 0)
+                                ps.env_sustain = unit->envelope.head_num + unit->envelope.body_num - 1;
+                            else
+                                ps.env_sustain = (ps.env_points.size()/2) - 1;
+                            if(ps.env_sustain < 0) ps.env_sustain = 0;
+                        }
+
+                        // Resampling
+                        int divisor = oct_wave[g].divisor;
+                        if (divisor == 1) {
+                            ps.data_16 = original_mono;
+                        } else {
+                            int src_len = original_mono.size();
+                            int dst_len = src_len / divisor;
+                            if (dst_len < 2) dst_len = 2;
+                            ps.data_16.resize(dst_len);
+                            double step = (double)src_len / (double)dst_len;
+                            double pos = 0.0;
+                            for(int k=0; k<dst_len; k++) {
+                                int idx = (int)pos;
+                                if(idx >= src_len) idx = src_len - 1;
+                                ps.data_16[k] = original_mono[idx];
+                                pos += step;
+                            }
                         }
                     }
+                    instruments.push_back(ps);
+                    
+                    // Map specific group to this instrument
+                    xm_inst_map[i][g] = xm_inst_counter;
+                    xm_inst_counter++;
                 }
-                instruments.push_back(ps);
+                printf("[INFO] Voice %d: Multi Mode (Range %d). Generated active groups.\n", i, range);
             }
         }
 
-        // --- 2. Build Grid ---
+        // =========================================================================
+        // PASS 3: BUILD GRID (Pattern Data)
+        // =========================================================================
         
         int32_t beat_num, beat_clock, meas_num;
         float beat_tempo;
         pxtn->master->Get(&beat_num, &beat_tempo, &beat_clock, &meas_num);
-        
         int rows_per_beat = 8;
         int ticks_per_row = beat_clock / rows_per_beat; 
         if (ticks_per_row < 1) ticks_per_row = 1;
+        int32_t actual_end = pxtn->evels->get_Max_Clock();
+        if (actual_end < pxtn->master->get_last_clock()) actual_end = pxtn->master->get_last_clock();
 
-        int32_t header_end = pxtn->master->get_last_clock();
-        int32_t events_end = pxtn->evels->get_Max_Clock();
-        int32_t actual_end = (events_end > header_end) ? events_end : header_end;
-
-        int total_rows = (actual_end / ticks_per_row) + 128;
-        int num_patterns = (total_rows / 64) + 1;
-        
-        printf("[INFO] Song Length: Header=%d, Events=%d -> Used=%d (%d Patterns)\n", header_end, events_end, actual_end, num_patterns);
-
-        int num_channels = pxtn->Unit_Num();
+        int num_patterns = ((actual_end / ticks_per_row) / 64) + 1;
         
         std::vector<std::vector<std::vector<GridCell>>> patterns(
             num_patterns, 
@@ -333,7 +421,6 @@ public:
         std::vector<int> unit_vel(num_channels, 128);
         std::vector<int> unit_vol(num_channels, 128);
 
-        const pxtnEvelist* evels = pxtn->evels;
         for (const EVERECORD* e = evels->get_Records(); e != NULL; e = e->next) {
             int u = e->unit_no;
             if (u >= num_channels) continue;
@@ -343,18 +430,15 @@ public:
             int row_idx = row_abs % 64;
 
             if (pat_idx >= num_patterns) continue;
-
             GridCell& cell = patterns[pat_idx][row_idx][u];
 
             switch (e->kind) {
                 case EVENTKIND_VOICENO: unit_woice[u] = e->value; break;
                 case EVENTKIND_KEY: unit_key[u] = e->value; break;
-                
                 case EVENTKIND_VELOCITY: 
                     unit_vel[u] = e->value; 
                     cell.volume = calc_xm_volume(unit_vol[u], unit_vel[u]);
                     break;
-                
                 case EVENTKIND_VOLUME: 
                     unit_vol[u] = e->value; 
                     cell.volume = calc_xm_volume(unit_vol[u], unit_vel[u]);
@@ -365,34 +449,38 @@ public:
                     uint8_t note = pxtn_key_to_xm(unit_key[u]);
                     cell.note = note;
                     
-                    // --- MAPPING LOGIC (Every 2 Octaves) ---
-                    // Octave 0-7 derived from note
                     int oct = (note - 1) / 12;
-                    if (oct < 0) oct = 0;
-                    if (oct > 7) oct = 7;
-                    
-                    // Map 0,1->0 | 2,3->1 | 4,5->2 | 6,7->3
-                    int inst_group_idx = oct / 2;
-                    
-                    // 4 Instruments per voice
-                    cell.instrument = (unit_woice[u] * 4) + inst_group_idx + 1;
+                    if (oct < 0) oct = 0; if (oct > 7) oct = 7;
+                    int group = oct / 2;
+
+                    int pxtn_v = unit_woice[u];
+                    if (pxtn_v < woice_count) {
+                        // USE THE MAP to find the correct instrument ID
+                        int xm_id = xm_inst_map[pxtn_v][group];
+                        
+                        // Fallback logic if map is 0 (shouldn't happen with correct pre-scan, 
+                        // but maybe note is slightly out of bounds of detected range or unused group)
+                        if (xm_id == 0) {
+                            // Find nearest neighbor in map
+                            for(int k=0; k<4; k++) if(xm_inst_map[pxtn_v][k] != 0) xm_id = xm_inst_map[pxtn_v][k];
+                        }
+                        
+                        cell.instrument = (uint8_t)xm_id;
+                    }
                     
                     cell.volume = calc_xm_volume(unit_vol[u], unit_vel[u]);
 
-                    int duration_rows = e->value / ticks_per_row;
-                    int off_abs = row_abs + duration_rows;
+                    int duration = e->value / ticks_per_row;
+                    int off_abs = row_abs + duration;
                     if (off_abs <= row_abs) off_abs = row_abs + 1; 
-
-                    int off_pat = off_abs / 64;
+                    int off_pat = off_abs / 64; 
                     int off_row = off_abs % 64;
-
                     if (off_pat < num_patterns) {
                         GridCell& off_cell = patterns[off_pat][off_row][u];
-                        if (off_cell.note == 0) off_cell.note = 97; // Key Off
+                        if (off_cell.note == 0) off_cell.note = 97; 
                     }
                     break;
                 }
-
                 case EVENTKIND_PAN_VOLUME:
                     cell.effect = 0x08;
                     cell.param = (uint8_t)(e->value * 2); 
@@ -401,8 +489,9 @@ public:
             }
         }
 
-        // --- 3. Write XM File ---
-
+        // =========================================================================
+        // PASS 4: WRITE FILE
+        // =========================================================================
         FILE* f = fopen(out_filename, "wb");
         if (!f) return;
 
@@ -417,19 +506,16 @@ public:
         xmh.restartPosition = 0;
         xmh.channels = num_channels;
         xmh.patterns = num_patterns;
-        xmh.instruments = instruments.size();
+        xmh.instruments = instruments.size(); // Actual generated count
         xmh.flags = 1; 
-        
         xmh.tempo = 3; 
         xmh.bpm = (uint16_t)beat_tempo;
-        
         for (int i = 0; i < num_patterns; i++) xmh.patternOrder[i] = i;
         fwrite(&xmh, sizeof(xmh), 1, f);
 
         for (int p = 0; p < num_patterns; p++) {
             uint32_t len=9; uint8_t typ=0; uint16_t rows=64; uint16_t size=0;
             std::vector<uint8_t> dat;
-
             for (int r = 0; r < 64; r++) {
                 for (int c = 0; c < num_channels; c++) {
                     GridCell& gc = patterns[p][r][c];
@@ -438,16 +524,13 @@ public:
                     if (gc.instrument) mask |= 2;
                     if (gc.volume) mask |= 4;
                     if (gc.effect) mask |= 24;
-
                     if (mask) {
                         dat.push_back(0x80 | mask);
                         if (mask & 1) dat.push_back(gc.note);
                         if (mask & 2) dat.push_back(gc.instrument);
                         if (mask & 4) dat.push_back(gc.volume);
                         if (mask & 24) { dat.push_back(gc.effect); dat.push_back(gc.param); }
-                    } else {
-                        dat.push_back(0x80);
-                    }
+                    } else dat.push_back(0x80);
                 }
             }
             size = (uint16_t)dat.size();
@@ -460,10 +543,19 @@ public:
             bool has_sample = !inst.data_16.empty();
             xih.size = has_sample ? 263 : 29;
             
-            // Name: "InstName-O01", "InstName-O23", etc.
+            // Name generation
             char name_buf[23];
             int s_oct = inst.oct_group * 2;
-            snprintf(name_buf, 22, "%.14s-O%d%d", inst.name.c_str(), s_oct, s_oct+1);
+            
+            // Check if Single Mode (how do we know? if data size == original size AND group==0 is ambiguous)
+            // But we know group 0 divisor 1 maps to full size.
+            // Let's use name logic:
+            if (inst.data_16.size() > 0 && inst.oct_group == 0 && inst.data_16.size() >= 100 /*arbitrary small*/ ) {
+                // If it was Single Mode, we just used name without suffix logic
+                snprintf(name_buf, 22, "%.15s", inst.name.c_str());
+            } else {
+                snprintf(name_buf, 22, "%.14s-O%d%d", inst.name.c_str(), s_oct, s_oct+1);
+            }
             memcpy(xih.name, name_buf, 22);
 
             xih.numSamples = has_sample ? 1 : 0;
@@ -485,26 +577,26 @@ public:
 
             if (has_sample) {
                 XMSampleHeader xsh = {0};
-                xsh.length = inst.data_16.size() * 2; // 16-bit
+                xsh.length = inst.data_16.size() * 2; 
                 xsh.type = 16; 
                 if (inst.flags & 1) { xsh.type |= 1; xsh.loopLength = xsh.length; }
                 xsh.volume = 64; xsh.panning = 128;
                 
-                // --- PITCH CORRECTION ---
-                // Base
+                // Pitch Calc
                 double rate_offset = 12.0 * log2(44100.0 / 8363.0) - 12.0; 
                 double pxtn_offset = (24576.0 - (double)inst.basic_key) / 256.0;
                 
-                // Resampling shift (matches the table logic)
+                // Divisor Logic Check
+                // If this specific instrument used a divisor, apply shift
+                int applied_divisor = oct_wave[inst.oct_group].divisor;
+                // However, in SINGLE MODE, we forced Divisor 1 regardless of group?
+                // Wait, in Single Mode we set `ps.oct_group = 0`. So `oct_wave[0].divisor` is 1. Correct.
                 double resize_shift = (double)oct_wave[inst.oct_group].shift;
                 
                 double total_semitones = rate_offset + pxtn_offset - 15 - resize_shift;
-
                 xsh.relNote = (int8_t)round(total_semitones);
-                
                 double fine_val = (total_semitones - xsh.relNote) * 128.0;
-                if (fine_val > 127) fine_val = 127;
-                if (fine_val < -128) fine_val = -128;
+                if (fine_val > 127) fine_val = 127; if (fine_val < -128) fine_val = -128;
                 xsh.finetune = (int8_t)fine_val;
                 
                 strncpy((char*)xsh.name, name_buf, 22);
@@ -521,7 +613,7 @@ public:
             }
         }
         fclose(f);
-        printf("[SUCCESS] XM exported to %s (Octave Resampling 2:1)\n", out_filename);
+        printf("[SUCCESS] XM exported to %s (Dynamic Instruments)\n", out_filename);
     }
 };
 
