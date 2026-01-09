@@ -1,4 +1,4 @@
-    
+
 # Shared SNES C Compiler Build Configuration
 # This file contains all compiler configurations, source definitions, and build rules
 
@@ -119,6 +119,7 @@ ifeq ($(COMPILER_LOWER),vbcc65816)
 endif
 
 # 1. NEW: VBCC Classic Configuration (Supports -O4)
+# 1. NEW: VBCC Classic Configuration (Supports -O4)
 ifeq ($(COMPILER_LOWER),vbcc_classic)
     CC = $(VBCC)/bin/vc
     AS = $(VBCC)/bin/vasm6502_oldstyle
@@ -130,10 +131,12 @@ ifeq ($(COMPILER_LOWER),vbcc_classic)
     ASFLAGS = -816 -quiet -nowarn=62 -opt-branch -ldots -Fvobj -underscore
     
     # Linker Flags:
-    # 1. We use --M to generate a map file. The 'vc' driver strips one '-' and passes it to vlink.
-    # 2. We avoid -symfile here because the 'vc' driver reorders paths with spaces, breaking the link.
-    # 3. --DROMSIZE is passed through to the linker script.
-    LDFLAGS = +snes-hi -lm -maxoptpasses=300 -O3 -inline-depth=1000 -unroll-all -fp-associative -force-statics -range-opt \
+    # 1. Use -Wl,-T... to pass the linker script through the vc driver to vlink
+    # 2. We use --M to generate a map file. The 'vc' driver strips one '-' and passes it to vlink.
+    # 3. We avoid -symfile here because the 'vc' driver reorders paths with spaces, breaking the link.
+    # 4. --DROMSIZE is passed through to the linker script.
+    LDFLAGS = +snes-hi -lm -maxoptpasses=300 -O4 -inline-depth=1000 -unroll-all -fp-associative -force-statics -range-opt \
+              --T./vlink-cs.cmd \
               -I"$(SHARED_SRC_DIR)" -I"lib" -I"include" -I"elua-0.9/inc" -I"elua-0.9/inc/snes" -I"elua-0.9/src/lua" -I"elua-0.9/inc/newlib" \
               -D__VBCC__=1 -DLUA_CROSS_COMPILER -D__VBCC65816__ \
               --M$(BUILD_DIR)/mainBankZero_vbcc65816.map \
