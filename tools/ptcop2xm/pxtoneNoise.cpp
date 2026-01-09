@@ -6,8 +6,10 @@
 
 #include "./pxtoneNoise.h"
 
-pxtoneNoise::pxtoneNoise()
+pxtoneNoise::pxtoneNoise( pxtnIO_r io_read, pxtnIO_w io_write, pxtnIO_seek io_seek, pxtnIO_pos io_pos )
 {
+	_set_io_funcs( io_read, io_write, io_seek, io_pos );
+
 	_bldr   = NULL ;
 	_sps    = 44100;
 	_ch_num =     2;
@@ -16,12 +18,12 @@ pxtoneNoise::pxtoneNoise()
 
 pxtoneNoise::~pxtoneNoise()
 {
-	if( _bldr ){delete (pxtnPulse_NoiseBuilder*)_bldr; _bldr = NULL; }
+	if( _bldr ) delete (pxtnPulse_NoiseBuilder*)_bldr; _bldr = NULL;
 }
 
 bool pxtoneNoise::init()
 {
-	pxtnPulse_NoiseBuilder *bldr = new pxtnPulse_NoiseBuilder();	
+	pxtnPulse_NoiseBuilder *bldr = new pxtnPulse_NoiseBuilder( _io_read, _io_write, _io_seek, _io_pos );	
 	if( !bldr->Init() ){ free( bldr ); return false; }	
 	_bldr = bldr;
 	return true;
@@ -51,7 +53,7 @@ bool pxtoneNoise::quality_set( int32_t ch_num, int32_t sps, int32_t bps )
 	_bps    = bps   ;
 	_sps    = sps   ;
 
-	return true;
+	return false;
 }
 
 void pxtoneNoise::quality_get( int32_t *p_ch_num, int32_t *p_sps, int32_t *p_bps ) const
@@ -62,14 +64,14 @@ void pxtoneNoise::quality_get( int32_t *p_ch_num, int32_t *p_sps, int32_t *p_bps
 }
 
 
-bool pxtoneNoise::generate( pxtnDescriptor *p_doc, void **pp_buf, int32_t *p_size ) const
+bool pxtoneNoise::generate( void* desc, void **pp_buf, int32_t *p_size ) const
 {
 	bool                   b_ret  = false;
 	pxtnPulse_NoiseBuilder *bldr  = (pxtnPulse_NoiseBuilder*)_bldr;
-	pxtnPulse_Noise        *noise = new pxtnPulse_Noise();
+	pxtnPulse_Noise        *noise = new pxtnPulse_Noise( _io_read, _io_write, _io_seek, _io_pos );
 	pxtnPulse_PCM          *pcm   = NULL;
 
-	if( noise->read( p_doc ) != pxtnOK                     ) goto End;
+	if( noise->read( desc ) != pxtnOK ) goto End;
 	if( !( pcm = bldr->BuildNoise( noise, _ch_num, _sps, _bps ) ) ) goto End;
 
 	*p_size = pcm->get_buf_size();

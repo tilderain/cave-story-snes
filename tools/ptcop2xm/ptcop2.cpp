@@ -1,7 +1,9 @@
 /*
-* ptcop2xm v2.5 (Envelope & Blank Note Fix)
+* ptcop2xm v2.6 (9 Octave Support)
 * 
 * Changelog:
+* - UPDATED: Increased octave range support from 7 to 9 (Notes up to 120).
+* - ADDED: New resampling group (1/16th size) for highest octave optimization.
 * - FIXED: Pass 1 Analysis now registers instruments even if they rely on default keys (Fixes blank notes).
 * - FIXED: Envelope parsing now checks PXTN_VOICEFLAG_ENVELOPE.
 * - FIXED: Envelope X-values are scaled to prevent "infinite attack" silence in XM.
@@ -28,16 +30,18 @@
 #define PXTN_VOICEFLAG_ENVELOPE 0x00000002 
 
 // --- Resampling Tables ---
+// Expanded to 5 groups to cover 9+ octaves
 typedef struct {
     short divisor;   
     short shift;     
 } OCTWAVE;
 
-OCTWAVE oct_wave[4] = {
+OCTWAVE oct_wave[5] = {
     { 1,  0 }, // Group 0: Oct 0-1 (Full Size)
     { 2, 12 }, // Group 1: Oct 2-3 (Half Size)
     { 4, 24 }, // Group 2: Oct 4-5 (Quarter Size)
-    { 8, 36 }  // Group 3: Oct 6-7 (Eighth Size)
+    { 8, 36 }, // Group 3: Oct 6-7 (Eighth Size)
+    { 16, 48 } // Group 4: Oct 8-9 (Sixteenth Size)
 };
 
 // ====================================================================================
@@ -125,7 +129,7 @@ struct ParsedSample {
 };
 
 struct GridCell {
-    uint8_t note = 0;       // 1-96, 97=Off
+    uint8_t note = 0;       // 1-120+, 97=Off (XM standard is 1-96, but extended is common)
     uint8_t instrument = 0; 
     uint8_t volume = 0;     // 0x10 - 0x50 (XM format)
     uint8_t effect = 0;
@@ -143,7 +147,7 @@ struct VoiceStats {
     int32_t min_key;
     int32_t max_key;
     bool used;
-    bool group_used[4]; 
+    bool group_used[5]; // Expanded to 5 groups
     bool is_sample; 
     
     VoiceStats() {
@@ -151,19 +155,37 @@ struct VoiceStats {
         max_key = -2147483647;
         used = false;
         is_sample = false;
-        for(int i=0; i<4; i++) group_used[i] = false;
+        for(int i=0; i<5; i++) group_used[i] = false;
     }
 };
 
 // ====================================================================================
 // HELPERS
 // ====================================================================================
+// --- Pxtone I/O Callbacks ---
+static bool _pxtn_r(void* user, void* p_dst, int size, int num) {
+    return fread(p_dst, size, num, (FILE*)user) == (size_t)num;
+}
+static bool _pxtn_w(void* user, const void* p_src, int size, int num) {
+    return fwrite(p_src, size, num, (FILE*)user) == (size_t)num;
+}
+static bool _pxtn_s(void* user, int mode, int size) {
+    return fseek((FILE*)user, size, mode) == 0;
+}
+static bool _pxtn_p(void* user, int32_t* p_pos) {
+    long i = ftell((FILE*)user);
+    if (i < 0) return false;
+    *p_pos = (int32_t)i;
+    return true;
+}
 
+// Updated to support higher note range
 uint8_t pxtn_key_to_xm(int32_t key) {
     double semitones = key / 256.0;
     int note = (int)(semitones) - 47; 
     if (note < 1) note = 1;
-    if (note > 96) note = 96;
+    // Expanded cap from 96 (8 octaves) to 120 (10 octaves)
+    if (note > 120) note = 120; 
     return (uint8_t)note;
 }
 
@@ -195,82 +217,46 @@ class PxtoneToXM {
     std::vector<uint8_t> file_mem;
 
 public:
-    PxtoneToXM() { pxtn = new pxtnService(); }
+
+PxtoneToXM() { 
+    pxtn = new pxtnService(_pxtn_r, _pxtn_w, _pxtn_s, _pxtn_p); 
+}
     ~PxtoneToXM() { if (pxtn) delete pxtn; }
 
-    void patch_memory() {
-        const char* target = "mateOGGV";
-        const char* replace = "textCOMM";
-        if (file_mem.size() < 8) return;
-        for (size_t i = 0; i < file_mem.size() - 8; i++) {
-            if (memcmp(&file_mem[i], target, 8) == 0) memcpy(&file_mem[i], replace, 8);
-        }
-    }
-
 bool load_and_init(const char* filename) {
-        printf("[DEBUG] Attempting to open: %s\n", filename);
+    printf("[DEBUG] Attempting to open: %s\n", filename);
 
-        FILE* f = fopen(filename, "rb");
-        if (!f) {
-            printf("[DEBUG] ERROR: Could not open file (fopen failed). Check path or permissions.\n");
-            return false;
-        }
-
-        fseek(f, 0, SEEK_END); 
-        long size = ftell(f); 
-        fseek(f, 0, SEEK_SET);
-
-        if (size <= 0) {
-            printf("[DEBUG] ERROR: File is empty or size is invalid (size: %ld).\n", size);
-            fclose(f);
-            return false;
-        }
-
-        file_mem.resize(size); 
-        size_t read_count = fread(file_mem.data(), 1, size, f); 
-        fclose(f);
-
-        if (read_count != (size_t)size) {
-            printf("[DEBUG] ERROR: Read size mismatch. Expected %ld, got %zu.\n", size, read_count);
-            return false;
-        }
-
-        patch_memory();
-
-        pxtnERR pxtn_res = pxtn->init();
-        if (pxtn_res != pxtnOK) {
-            printf("[DEBUG] ERROR: pxtnService init failed. Code: %d\n", pxtn_res);
-            return false;
-        }
-
-        pxtn->set_destination_quality(2, 44100);
-        
-        pxtnDescriptor desc;
-        if (!desc.set_memory_r(file_mem.data(), size)) {
-            printf("[DEBUG] ERROR: pxtnDescriptor failed to set memory.\n");
-            return false;
-        }
-
-        // Try to read the project
-        pxtn_res = pxtn->read(&desc);
-        if (pxtn_res != pxtnOK) {
-            printf("[DEBUG] ERROR: pxtnService read failed. Code: %d\n", pxtn_res);
-            printf("        Common causes:\n");
-            printf("        - pxtnERR_fmt_new: File version is newer than this library supports.\n");
-            printf("        - pxtnERR_fmt_unknown: Not a valid ptcop file.\n");
-            return false;
-        }
-
-        // Decode samples (Voice/Wave generation)
-        pxtn_res = pxtn->tones_ready();
-        if (pxtn_res != pxtnOK) {
-            printf("[DEBUG] ERROR: pxtnService tones_ready failed. Code: %d\n", pxtn_res);
-            printf("        This usually means a sample/voice could not be decoded.\n");
-            return false;
-        }
-
-        return true;
+    FILE* f = fopen(filename, "rb");
+    if (!f) {
+        printf("[DEBUG] ERROR: Could not open file.\n");
+        return false;
     }
+
+    pxtnERR pxtn_res = pxtn->init();
+    if (pxtn_res != pxtnOK) {
+        printf("[DEBUG] ERROR: pxtnService init failed.\n");
+        fclose(f);
+        return false;
+    }
+
+    pxtn->set_destination_quality(2, 44100);
+
+    pxtn_res = pxtn->read(f);
+    fclose(f); 
+
+    if (pxtn_res != pxtnOK) {
+        printf("[DEBUG] ERROR: pxtnService read failed. Code: %d\n", pxtn_res);
+        return false;
+    }
+
+    pxtn_res = pxtn->tones_ready();
+    if (pxtn_res != pxtnOK) {
+        printf("[DEBUG] ERROR: pxtnService tones_ready failed.\n");
+        return false;
+    }
+
+    return true;
+}
 
     void export_xm(const char* out_filename) {
         int woice_count = pxtn->Woice_Num();
@@ -281,7 +267,7 @@ bool load_and_init(const char* filename) {
         int32_t beat_num, beat_clock, meas_num;
         float beat_tempo;
         pxtn->master->Get(&beat_num, &beat_tempo, &beat_clock, &meas_num);
-        int rows_per_beat = 4; // High resolution
+        int rows_per_beat = 8; // High resolution
         int ticks_per_row = beat_clock / rows_per_beat; 
         if (ticks_per_row < 1) ticks_per_row = 1;
         
@@ -293,7 +279,7 @@ bool load_and_init(const char* filename) {
         // =========================================================================
         std::vector<VoiceStats> v_stats(woice_count);
         std::vector<int> unit_current_woice(unit_count, 0);
-        std::vector<int> unit_current_key(unit_count, 0x6000); // Default key (Middle C)
+        std::vector<int> unit_current_key(unit_count, 0x6000); 
 
         for (const EVERECORD* e = evels->get_Records(); e != NULL; e = e->next) {
             if (e->unit_no >= unit_count) continue;
@@ -303,7 +289,6 @@ bool load_and_init(const char* filename) {
             }
             else if (e->kind == EVENTKIND_KEY) {
                 unit_current_key[e->unit_no] = e->value;
-                // Also mark used here for safety
                 int w = unit_current_woice[e->unit_no];
                 if (w < woice_count) {
                     v_stats[w].used = true;
@@ -312,13 +297,13 @@ bool load_and_init(const char* filename) {
                     
                     uint8_t note = pxtn_key_to_xm(e->value);
                     int oct = (note - 1) / 12;
-                    if (oct < 0) oct = 0; if (oct > 7) oct = 7;
+                    if (oct < 0) oct = 0; 
+                    if (oct > 9) oct = 9; // Expanded to 9
                     int group = oct / 2;
+                    if (group > 4) group = 4;
                     v_stats[w].group_used[group] = true;
                 }
             }
-            // CRITICAL FIX: Mark usage on NOTE ON as well.
-            // Some pxtone files rely on default key (0x6000) without explicit key events.
             else if (e->kind == EVENTKIND_ON) {
                 int w = unit_current_woice[e->unit_no];
                 int k = unit_current_key[e->unit_no];
@@ -329,8 +314,10 @@ bool load_and_init(const char* filename) {
 
                     uint8_t note = pxtn_key_to_xm(k);
                     int oct = (note - 1) / 12;
-                    if (oct < 0) oct = 0; if (oct > 7) oct = 7;
+                    if (oct < 0) oct = 0; 
+                    if (oct > 9) oct = 9; // Expanded to 9
                     int group = oct / 2;
+                    if (group > 4) group = 4;
                     v_stats[w].group_used[group] = true;
                 }
             }
@@ -349,7 +336,8 @@ bool load_and_init(const char* filename) {
         // PASS 2: GENERATE INSTRUMENTS & MAPS
         // =========================================================================
         std::vector<ParsedSample> instruments;
-        std::vector<std::vector<int>> xm_inst_map(woice_count, std::vector<int>(4, 0));
+        // Map size expanded to 5
+        std::vector<std::vector<int>> xm_inst_map(woice_count, std::vector<int>(5, 0));
         int xm_inst_counter = 1;
 
         for (int i = 0; i < woice_count; i++) {
@@ -379,9 +367,6 @@ bool load_and_init(const char* filename) {
                 for(int k=0; k<len; k++) original_mono[k] = (raw[k*2] + raw[k*2+1]) / 2;
             }
 
-            // Note: Even if has_sample is false, we might want to generate a placeholder if logic demands
-            // but usually Pxtone voices have samples after tones_ready().
-
             if (single_mode) {
                 ParsedSample ps;
                 ps.pxtn_id = i;
@@ -396,10 +381,12 @@ bool load_and_init(const char* filename) {
                     parse_envelope(unit, ps);
                 }
                 instruments.push_back(ps);
-                for(int g=0; g<4; g++) xm_inst_map[i][g] = xm_inst_counter;
+                // Map all groups to this single instrument
+                for(int g=0; g<5; g++) xm_inst_map[i][g] = xm_inst_counter;
                 xm_inst_counter++;
             } else {
-                for(int g = 0; g < 4; g++) {
+                // Loop extended to 5
+                for(int g = 0; g < 5; g++) {
                     if (!v_stats[i].group_used[g]) continue; 
 
                     ParsedSample ps;
@@ -411,7 +398,7 @@ bool load_and_init(const char* filename) {
                     if (has_sample) {
                         ps.basic_key = unit->basic_key;
                         ps.flags = unit->voice_flags;
-                        parse_envelope(unit, ps); // Apply envelope logic
+                        parse_envelope(unit, ps);
 
                         int divisor = oct_wave[g].divisor;
                         if (divisor == 1) {
@@ -480,7 +467,6 @@ bool load_and_init(const char* filename) {
                 if (!collision) { best_ch = ch; break; }
             }
             if (best_ch == -1) {
-                // Stealing logic omitted for brevity, essentially same as previous
                 for (int ch = 0; ch < MAX_XM_CHANNELS; ch++) {
                     if (evt.start_row < total_rows && !alloc_layout[ch][evt.start_row]) { best_ch = ch; break; }
                 }
@@ -522,37 +508,27 @@ bool load_and_init(const char* filename) {
             while (e != NULL && e->clock < row_end_clock) {
                 int u = e->unit_no;
                 if (u < unit_count) {
-                    bool vol_changed = false; // Flag to track volume updates
+                    bool vol_changed = false; 
 
                     switch(e->kind) {
                         case EVENTKIND_VOICENO: u_woice[u] = e->value; break;
                         case EVENTKIND_KEY: u_key[u] = e->value; break;
                         case EVENTKIND_VELOCITY: 
                             u_vel[u] = e->value; 
-                            vol_changed = true; // Mark change
+                            vol_changed = true; 
                             break;
                         case EVENTKIND_VOLUME: 
                             u_vol[u] = e->value; 
-                            vol_changed = true; // Mark change
+                            vol_changed = true; 
                             break;
                         case EVENTKIND_PAN_VOLUME: break; 
                     }
                     
                     for(int ch=0; ch<MAX_XM_CHANNELS; ch++) {
-                        // Check if this channel is playing the current unit
                         if (alloc_layout[ch][r_abs] == u) {
                              GridCell& cell = patterns[p_idx][r_idx][ch];
-
-                            // --- FIX: APPLY VOLUME PARAMETER ---
-                            // If volume/velocity changed, apply it to the grid cell immediately.
                             if (vol_changed) {
                                 cell.volume = calc_xm_volume(u_vol[u], u_vel[u]);
-                            }
-                            // -----------------------------------
-
-                            // Only process ON/PAN inside this loop to catch precise timing
-                            if (is_attack[ch][r_abs] && e->kind == EVENTKIND_ON) {
-                                // (Note placement logic handled by Fallback below)
                             }
                             if (e->kind == EVENTKIND_PAN_VOLUME) {
                                 cell.effect = 0x08;
@@ -565,27 +541,30 @@ bool load_and_init(const char* filename) {
                 e = e->next;
             }
 
-            // Fallback: If alloc_layout says a note starts here, but we missed the event 
-            // (e.g., event was slightly earlier or later in processing), force write it based on state
+            // Fallback logic for Note placement
             for(int ch=0; ch<MAX_XM_CHANNELS; ch++) {
                 if (is_attack[ch][r_abs]) {
                     GridCell& cell = patterns[p_idx][r_idx][ch];
-                    if (cell.note == 0) { // If not written by loop above
+                    if (cell.note == 0) { 
                         int u = alloc_layout[ch][r_abs];
                         if (u != -1) {
                             uint8_t n = pxtn_key_to_xm(u_key[u]);
-                            int oct = (n - 1) / 12; if (oct < 0) oct = 0; if (oct > 7) oct = 7;
+                            int oct = (n - 1) / 12; 
+                            if (oct < 0) oct = 0; 
+                            if (oct > 9) oct = 9; // Cap expanded
                             int grp = oct / 2;
+                            if (grp > 4) grp = 4;
+
                             int w = u_woice[u];
                             if (w < woice_count) {
                                 int xm_id = xm_inst_map[w][grp];
                                 int used_grp = grp;
                                 
-                                // Neighbor search for blank notes
+                                // Neighbor search expanded to 5
                                 if(xm_id == 0) { 
                                     int best_dist = 100;
                                     int best_grp = -1;
-                                    for(int k=0; k<4; k++) {
+                                    for(int k=0; k<5; k++) {
                                         if (xm_inst_map[w][k] != 0) {
                                             int dist = abs(k - grp);
                                             if (dist < best_dist) { best_dist = dist; best_grp = k; }
@@ -598,7 +577,10 @@ bool load_and_init(const char* filename) {
                                     cell.instrument = (uint8_t)xm_id;
                                     int correction = (used_grp - grp) * 12;
                                     int final_note = n + correction;
-                                    if (final_note < 1) final_note = 1; if (final_note > 96) final_note = 96;
+                                    if (final_note < 1) final_note = 1; 
+                                    // XM Note limit is 96, but some trackers support more. 
+                                    // We cap at 120 to support the range requested.
+                                    if (final_note > 120) final_note = 120; 
                                     cell.note = (uint8_t)final_note;
                                     cell.volume = calc_xm_volume(u_vol[u], u_vel[u]);
                                 }
@@ -607,7 +589,6 @@ bool load_and_init(const char* filename) {
                     }
                 }
                 
-                // Handle Note Offs
                 int curr_u = alloc_layout[ch][r_abs];
                 int prev_u = (r_abs > 0) ? alloc_layout[ch][r_abs-1] : -1;
                 if (prev_u != -1 && curr_u == -1) {
@@ -617,7 +598,7 @@ bool load_and_init(const char* filename) {
             }
         }
 
-        write_xm_file(out_filename, num_patterns, MAX_XM_CHANNELS, instruments, patterns, beat_tempo);
+        write_xm_file(out_filename, num_patterns, MAX_XM_CHANNELS, instruments, patterns, beat_tempo/2);
     }
 
 private:
@@ -625,27 +606,22 @@ private:
         bool loops = (unit->voice_flags & PXTN_VOICEFLAG_WAVELOOP);
         bool has_env = (unit->voice_flags & PXTN_VOICEFLAG_ENVELOPE);
         
-        // Pxtone X coords can be very large. We must scale them to XM ticks.
-        // Assuming high-res output, a divisor of 4 to 8 is safe to preserve shape without being too slow.
-        // If notes sound silent/delayed, increase this check or divisor logic.
-        int time_scale_div = 8; 
+        int time_scale_div = 4; 
 
         if ((unit->envelope.head_num > 0 || unit->envelope.body_num > 0) || has_env) {
             ps.env_enabled = true;
             int cur_x = 0;
             int count = unit->envelope.head_num + unit->envelope.body_num + unit->envelope.tail_num;
-            if (count > 12) count = 12; // XM limit per envelope is 12 points
+            if (count > 12) count = 12; 
 
-            // If flag is set but points are weirdly 0, we still try to process or fallback
             if (count == 0 && has_env) {
-                 // Fallback to basic envelope if forced
                  ps.env_points.push_back(0); ps.env_points.push_back(64);
                  ps.env_points.push_back(10); ps.env_points.push_back(0);
                  ps.env_sustain = 0;
             } else {
                 for (int k = 0; k < count; k++) {
                     cur_x += unit->envelope.points[k].x;
-                    int x_xm = cur_x / time_scale_div; // Scaling fix
+                    int x_xm = cur_x / time_scale_div; 
                     int y = unit->envelope.points[k].y / 2;
                     if (y > 64) y = 64;
                     
@@ -654,9 +630,6 @@ private:
                 }
                 
                 if (unit->envelope.body_num > 0) {
-                     // In XM, Sustain point is an index.
-                     // Pxtone body is the sustain LOOP. 
-                     // We map Sustain point to the end of the body.
                      ps.env_sustain = unit->envelope.head_num + unit->envelope.body_num - 1;
                 } else {
                      ps.env_sustain = (ps.env_points.size()/2) - 1;
@@ -685,7 +658,7 @@ private:
         memcpy(xmh.id, "Extended Module: ", 17);
         memcpy(xmh.moduleName, "Pxtone Export", 13);
         xmh.eof = 0x1A;
-        memcpy(xmh.trackerName, "PxtoneToXM 2.5", 14);
+        memcpy(xmh.trackerName, "PxtoneToXM 2.6", 14);
         xmh.version = 0x0104;
         xmh.headerSize = 0x114;
         xmh.songLength = num_patterns > 256 ? 256 : num_patterns;
@@ -739,7 +712,7 @@ private:
                 xih.sampleHeaderSize = 40;
                 if (inst.env_enabled) {
                     xih.volType = 1; xih.volPoints = inst.env_points.size() / 2;
-                    xih.volSustain = inst.env_sustain; xih.volType |= 2; // Sustain on
+                    xih.volSustain = inst.env_sustain; xih.volType |= 2; 
                     for (size_t k = 0; k < inst.env_points.size(); k++) {
                         uint16_t val = inst.env_points[k];
                         xih.volEnv[k*2] = val & 0xFF; xih.volEnv[k*2+1] = (val >> 8) & 0xFF;

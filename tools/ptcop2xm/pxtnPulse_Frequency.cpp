@@ -49,13 +49,16 @@ double pxtnPulse_Frequency::_GetDivideOctaveRate( int32_t  divi )
 	return parameter;
 }
 
-pxtnPulse_Frequency::pxtnPulse_Frequency()
+pxtnPulse_Frequency::pxtnPulse_Frequency( pxtnIO_r io_read, pxtnIO_w io_write, pxtnIO_seek io_seek, pxtnIO_pos io_pos )
 {
+	_set_io_funcs( io_read, io_write, io_seek, io_pos );
+
 	_freq_table = NULL;
 }
+
 pxtnPulse_Frequency::~pxtnPulse_Frequency()
 {
-	if( _freq_table ){ free( _freq_table ); _freq_table = NULL; }
+	if( _freq_table ) free( _freq_table ); _freq_table = NULL;
 }
 
 bool pxtnPulse_Frequency::Init()

@@ -22,13 +22,13 @@ class pxtnDescriptor
 {
 private:
 
-	void operator = (const pxtnDescriptor& src);
-	pxtnDescriptor  (const pxtnDescriptor& src);
+	void operator = (const pxtnDescriptor& src){}
+	pxtnDescriptor  (const pxtnDescriptor& src){}
 
 	enum
 	{
 		_BUFSIZE_HEEP = 1024,
-		_TAGLINE_NUM  =  128
+		_TAGLINE_NUM  =  128,
 	};
 	
 	void    *_p_desc;
