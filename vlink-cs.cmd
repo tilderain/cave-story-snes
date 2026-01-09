@@ -22,9 +22,7 @@ MEMORY
  
  /* 
     FIX: Map 'lrom', 'header', and 'vectors' to Bank $00 addresses.
-    This ensures 16-bit vectors/pointers resolve correctly (e.g., 0x8000 instead of 0x808000).
-    The content is virtually identical to Bank $80, so jumps to $80xxxx will still work at runtime
-    if your code performs a long jump (JML) to the high bank.
+    This ensures 16-bit vectors/pointers resolve correctly.
  */
  header : org = 0x00FFC0, len = 0x20
  vectors : org = 0x00FFE0, len = 0x20
@@ -61,10 +59,16 @@ SECTIONS
   
   /* 
      2. Upper 32KB of the first bank (mapped to $008000).
-     Contains startup code, vectors, and standard text.
-     Resolves symbols to 16-bit $xxxx addresses.
+     *** CHANGED *** 
+     Only keep startup code, near specific code, and vectors here.
+     Standard 'text' has been moved to 'from' (hrom) for FastROM execution.
   */
-  nrom  : {*(*_text.startup) *(*_text.near.*) *(*_rodata.near.*) *(.ctors) *(.dtors) *(text) *(*_text*) *(*_rodata.*) } >lrom AT>out
+  nrom  : {
+    *(*_text.startup) 
+    *(*_text.near.*) 
+    *(*_rodata.near.*) 
+    /* removed *(text) and *(*_text*) from here */
+  } >lrom AT>out
   
   /* Fill up to the header start ($00FFC0) */
   fill0 : {.=0x00FFC0;} >lrom AT>out
@@ -75,8 +79,17 @@ SECTIONS
   /* 
      3. Remaining ROM Banks (mapped to $C10000+).
      Bulk assets and code.
+     *** CHANGED ***
+     Standard code (*(text)) is now placed here to run in FastROM.
   */
-  from (BANKSIZE=65536): {*(*_text.far.*) *(*_rodata.far.*)} >hrom AT>out
+  from (BANKSIZE=65536): {
+    *(text)          /* Standard C code moved here */
+    *(*_text*)       /* Other text sections moved here */
+    *(*_rodata.*)    /* Standard rodata moved here */
+    *(*_text.far.*) 
+    *(*_rodata.far.*)
+  } >hrom AT>out
+  
   hrom : {*(*_text.huge.*) *(*_rodata.huge.*) } >hrom AT>out
 
   /* RAM Section Definitions */
