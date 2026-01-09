@@ -4,56 +4,82 @@ WRAMSIZE   =?  0x20000;
 LORAMSTART =?   0x0000;
 LORAMSIZE  =?   0x2000;
 
-/* CHANGE: Increased ROMSIZE from 0x80000 (512KB) to 0x400000 (4MB) */
+/* ROMSIZE is 4MB */
 ROMSIZE    =?  0x400000;
 
 MEMORY
 {
- /* 'out' file container size */
+ /* 
+    'out' defines the physical file layout.
+    We pack sections into this container sequentially.
+ */
  out : org = 0x0000, len = 0x1000000
 
+ /* Standard Zero Page / RAM regions */
  zero : org = 0 , len = 256
-
  loram : org = LORAMSTART + 256, len = (LORAMSIZE-256-STACKLEN)
  wram : org = (WRAMSTART + LORAMSIZE), len = WRAMSIZE-LORAMSIZE
- header : org = 0xFFC0, len = 0x20
- vectors : org = 0xFFE0, len = 0x20
-
- /* Bank $40 (First 32KB of HiROM) */
- xrom : org = 0x400000, len = 0x8000
  
- /* Bank $00 (Lower 32KB mirror for startup/interrupts) */
+ /* 
+    FIX: Map 'lrom', 'header', and 'vectors' to Bank $00 addresses.
+    This ensures 16-bit vectors/pointers resolve correctly (e.g., 0x8000 instead of 0x808000).
+    The content is virtually identical to Bank $80, so jumps to $80xxxx will still work at runtime
+    if your code performs a long jump (JML) to the high bank.
+ */
+ header : org = 0x00FFC0, len = 0x20
+ vectors : org = 0x00FFE0, len = 0x20
+ 
+ /* 
+    xrom: The first 32KB of the ROM file.
+    Mapped to Bank $C0 (FastROM) for 24-bit access.
+ */
+ xrom : org = 0xC00000, len = 0x8000
+ 
+ /* 
+    lrom: The upper 32KB of the first bank.
+    Mapped to Bank $00 (SlowROM mirror) to satisfy 16-bit vector requirements.
+ */
  lrom : org = 0x008000, len = 0x8000 - 0x40
  
  /* 
-    HiROM Data Area (Banks $41 through $7F). 
-    Starts at 0x410000. 
-    Length = Total Size (4MB) - First Bank (64KB alignment adjustment) 
+    hrom: The rest of the ROM (Banks $C1+).
+    Mapped to FastROM addresses.
  */
- hrom : org = 0x410000, len = ROMSIZE - 0x10000
+ hrom : org = 0xC10000, len = ROMSIZE - 0x10000
 }
 
 SECTIONS
 {
-  /* Put startup code and critical far data in the first bank (xrom) */
+  /* 
+     1. Lower 32KB of the first bank (mapped to $C00000).
+     Contains constructors/destructors and specific far/huge data.
+  */
   xrom  : {*(.ctors) *(.dtors) *(*_text.far.*) *(*_rodata.far.*) *(*_text.huge.*) *(*_rodata.huge.*) } >xrom AT>out
-  fillx : {.=0x408000;} >xrom AT>out
   
-  /* Near code/data goes to low mirror */
+  /* Fill up to the 32KB mark ($C08000) */
+  fillx : {.=0xC08000;} >xrom AT>out
+  
+  /* 
+     2. Upper 32KB of the first bank (mapped to $008000).
+     Contains startup code, vectors, and standard text.
+     Resolves symbols to 16-bit $xxxx addresses.
+  */
   nrom  : {*(*_text.startup) *(*_text.near.*) *(*_rodata.near.*) *(.ctors) *(.dtors) *(text) *(*_text*) *(*_rodata.*) } >lrom AT>out
-  fill0 : {.=0xFFC0;} >lrom AT>out
+  
+  /* Fill up to the header start ($00FFC0) */
+  fill0 : {.=0x00FFC0;} >lrom AT>out
+  
   header : {EXTERN(___header_hirom_ntsc) *(*header)} >header AT>out
   vectors : {EXTERN(___vecs) *(*vectors)} >vectors AT>out
 
   /* 
-     Bulk Assets:
-     This is where your map data, graphics, and scripts go.
-     It now writes to the expanded 'hrom' region.
+     3. Remaining ROM Banks (mapped to $C10000+).
+     Bulk assets and code.
   */
   from (BANKSIZE=65536): {*(*_text.far.*) *(*_rodata.far.*)} >hrom AT>out
   hrom : {*(*_text.huge.*) *(*_rodata.huge.*) } >hrom AT>out
 
-  /* RAM definitions */
+  /* RAM Section Definitions */
   ndata: {*(*_data.near.*)} >loram AT>out
   nbss (NOLOAD): {*(*_bss.near.*)} >loram
   fdata (BANKSIZE=65536): { *(SORT_BY_SIZE(*_data.far.*))} >wram AT>out
@@ -61,6 +87,7 @@ SECTIONS
   hdata: { *(*_data.huge.*)} >wram AT>out
   hbss (NOLOAD): { *(*_bss.huge.*)} >wram
 
+  /* Final pad to ensure ROM size */
   fill : { BYTE(0); .=ALIGN(32768)-1; BYTE(0); } >out
 
   zpage (NOLOAD) : {*(zpage) *(zp1) *(zp2)} >zero

@@ -101,7 +101,7 @@ ifeq ($(COMPILER_LOWER),vbcc65816)
     # 4. Linker Flags (Direct vlink arguments)
     # We explicitly include the startup.o, standard libs, and ROM size here
     LDFLAGS = -b rawbin1 -nowarn=22 -Cvbcc \
-              -T$(VBCC)/targets/65816-snes/vlink-hi.cmd \
+              -T./vlink-cs.cmd \
               -L$(VBCC)/targets/65816-snes/lib \
               $(VBCC)/targets/65816-snes/lib/startup.o \
               -DROMSIZE=0x400000 \
