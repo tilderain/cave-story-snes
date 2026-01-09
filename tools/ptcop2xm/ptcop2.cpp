@@ -473,21 +473,37 @@ public:
             while (e != NULL && e->clock < row_end_clock) {
                 int u = e->unit_no;
                 if (u < unit_count) {
+                    bool vol_changed = false; // Flag to track volume updates
+
                     switch(e->kind) {
                         case EVENTKIND_VOICENO: u_woice[u] = e->value; break;
                         case EVENTKIND_KEY: u_key[u] = e->value; break;
-                        case EVENTKIND_VELOCITY: u_vel[u] = e->value; break;
-                        case EVENTKIND_VOLUME: u_vol[u] = e->value; break;
+                        case EVENTKIND_VELOCITY: 
+                            u_vel[u] = e->value; 
+                            vol_changed = true; // Mark change
+                            break;
+                        case EVENTKIND_VOLUME: 
+                            u_vol[u] = e->value; 
+                            vol_changed = true; // Mark change
+                            break;
                         case EVENTKIND_PAN_VOLUME: break; 
                     }
                     
                     for(int ch=0; ch<MAX_XM_CHANNELS; ch++) {
+                        // Check if this channel is playing the current unit
                         if (alloc_layout[ch][r_abs] == u) {
                              GridCell& cell = patterns[p_idx][r_idx][ch];
 
+                            // --- FIX: APPLY VOLUME PARAMETER ---
+                            // If volume/velocity changed, apply it to the grid cell immediately.
+                            if (vol_changed) {
+                                cell.volume = calc_xm_volume(u_vol[u], u_vel[u]);
+                            }
+                            // -----------------------------------
+
                             // Only process ON/PAN inside this loop to catch precise timing
                             if (is_attack[ch][r_abs] && e->kind == EVENTKIND_ON) {
-                                // Note placement logic is here...
+                                // (Note placement logic handled by Fallback below)
                             }
                             if (e->kind == EVENTKIND_PAN_VOLUME) {
                                 cell.effect = 0x08;
