@@ -1,8 +1,7 @@
-#include "common.h"
-#include <string.h>
-#undef abs  // Undefine macro before including stdlib.h to avoid conflict
 #include <stdlib.h>
-#define abs(X) (((X) < 0)?-(X):(X))  // Redefine after stdlib.h
+
+
+#include "common.h"
 #include "audio.h"
 #include "bank_data.h"
 #include "camera.h"
@@ -75,9 +74,6 @@ uint8_t moveMeToFront = FALSE;
 
 Entity *entityList = NULL, *inactiveList = NULL, *bossEntity = NULL;
 
-// Stub for error_oom - use macro to avoid VBCC issues
-#define error_oom() do { /* Out of memory - stub */ } while(0)
-
 AnimationFrame* get_animation_frame(uint16_t type)
 {
 	if(npc_info[type].sheet != NOSHEET)
@@ -92,8 +88,8 @@ AnimationFrame* get_animation_frame(uint16_t type)
 	}
 	else
 	{
-	//	return SPR_Sue.animations[0]->frames[0];
-	return 0;
+		//return SPR_Sue.animations[0]->frames[0];
+		return 0;
 	}
 }
 
@@ -124,8 +120,7 @@ void entity_reactivate(Entity *e) {
 			//if(npc_info[e->type].sprite == NULL) sprite_count = 0;
 			e->vramindex = tiloc_index + (e->tiloc << 2);
 			uint16_t tile_offset = 0;
-			uint8_t i;
-			for( i = 0; i < e->sprite_count; i++) {
+			for(uint8_t i = 0; i < e->sprite_count; i++) {
 				sprite_index(e->sprite[i], e->vramindex + tile_offset);
 				tile_offset += f->vdpSpritesInf[i]->numTile;
 			}
@@ -192,10 +187,10 @@ uint16_t entities_count() {
 	return entities_count_active() + entities_count_inactive();
 }
 
-void entities_update(uint8_t draw) {
+IWRAM_CODE void entities_update(uint8_t draw) {
 	uint16_t new_active_count = 0;
 	Entity *e = entityList;
-	/*
+	
 	while(e) {
 		if(!e->alwaysActive && !entity_on_screen(e)) {
 			Entity *next = e->next;
@@ -223,8 +218,7 @@ void entities_update(uint8_t draw) {
 				.y2 = (e->y >> CSF) + (e->hit_box.bottom),
 			};
 			uint8_t cont = FALSE;
-			uint16_t i;
-			for( i = 0; i < MAX_BULLETS; i++) {
+			for(uint16_t i = 0; i < MAX_BULLETS; i++) {
 				if(playerBullet[i].ttl &&
 					playerBullet[i].extent.x2 >= ee.x1 &&
                     playerBullet[i].extent.x1 <= ee.x2 &&
@@ -323,7 +317,7 @@ void entities_update(uint8_t draw) {
 			}
 			if(!e->damage_time) {
 				if(e->flags & NPC_SHOWDAMAGE) {
-					effect_create_damage(e->damage_value, e, 0, 0);
+					//effect_create_damage(e->damage_value, e, 0, 0);
 				}
 				e->damage_value = 0;
 				e->xoff = 0;
@@ -333,7 +327,7 @@ void entities_update(uint8_t draw) {
 		const AnimationFrame *f = get_animation_frame(e->type);
 		//uint8_t sprite_count = f->numSprite;
 		//if(npc_info[e->type].sprite == NULL) sprite_count = 0;
-		if(draw && !e->hidden) {
+		/*if(draw && !e->hidden) {
 			if(e->sheet != NOSHEET) {
 
 
@@ -394,7 +388,7 @@ void entities_update(uint8_t draw) {
 				}
 			}
 			vdp_sprites_add(e->sprite, e->sprite_count);
-		}
+		}*/
 		if(moveMeToFront) {
 			moveMeToFront = FALSE;
 			Entity *next = e->next;
@@ -403,7 +397,7 @@ void entities_update(uint8_t draw) {
 			e = next;
 		} else e = e->next;
 	}
-	entity_active_count = new_active_count;*/
+	entity_active_count = new_active_count;
 }
 
 void entity_handle_bullet(Entity *e, Bullet *b) {
@@ -745,7 +739,6 @@ uint8_t entity_overlapping(Entity *a, Entity *b) {
 
 bounding_box entity_react_to_collision(Entity *a, Entity *b) {
 	bounding_box result = { 0, 0, 0, 0 };
-	/*
 	int16_t ax1 = sub_to_pixel(a->x_next) - (a->dir ? a->hit_box.right : a->hit_box.left),
 		ax2 = sub_to_pixel(a->x_next) + (a->dir ? a->hit_box.left : a->hit_box.right),
 		ay1 = sub_to_pixel(a->y_next) - a->hit_box.top,
@@ -832,7 +825,7 @@ bounding_box entity_react_to_collision(Entity *a, Entity *b) {
 				if(a->x_speed > 0) a->x_speed = 0;
 			}
 		}
-	}*/
+	}
 	return result;
 }
 
@@ -988,7 +981,7 @@ Entity *entity_create_ext(int32_t x, int32_t y, uint16_t type, uint16_t flags, u
 
 		//Minimum 4 sprites
 	Entity *e = malloc(sizeof(Entity) + sizeof(VDPSprite) * sprite_count + (sizeof(VDPSprite)*4));
-	if(!e) error_oom();
+	//if(!e) error_oom();
 	memset(e, 0, sizeof(Entity) + sizeof(VDPSprite) * sprite_count + (sizeof(VDPSprite)*4));
 	e->x = x;
 	e->y = y;
@@ -1060,7 +1053,7 @@ Entity *entity_create_ext(int32_t x, int32_t y, uint16_t type, uint16_t flags, u
 }
 
 void entities_replace(uint16_t event, uint16_t type, uint8_t direction, uint16_t flags) {
-    static const int flags_to_keep = (NPC_INTERACTIVE | NPC_EVENTONDEATH
+    const static int flags_to_keep = (NPC_INTERACTIVE | NPC_EVENTONDEATH
                                       | NPC_DISABLEONFLAG | NPC_ENABLEONFLAG | NPC_OPTION2);
 	Entity *e = entityList;
 	while(e) {
