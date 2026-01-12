@@ -336,6 +336,7 @@ void game_main(uint8_t load) {
     REG_CGDATA = 0xff; // Pure Green (5-bit BGR: 00000 01111 00000)
     REG_CGDATA = 0x00;
 		oamUpdate(); 
+
 		extern u8 id;
 		id = 1;
 		// Map buffer is updated by stage_draw_screen() when needed, no need to copy every frame
@@ -365,6 +366,7 @@ void game_main(uint8_t load) {
 
 		bgSetEnable(0);
 		REG_TM = 0x1f;
+		manual_oam_clear();
 		stage_update();
 		joy_update();
 		//PF_BGCOLOR(0x00E);

@@ -13,8 +13,8 @@
 #define BUTTON_Z        0x0100
 #define BUTTON_MODE     0x0800 */
 
-#define BUTTON_UP       (1<<6)
-#define BUTTON_DOWN     (1<<7)
+#define BUTTON_UP       0x0800
+#define BUTTON_DOWN     0x0400
 #define BUTTON_LEFT     (1<<5)
 #define BUTTON_RIGHT    (1<<4)
 #define BUTTON_A        0x0040

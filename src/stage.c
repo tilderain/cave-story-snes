@@ -315,7 +315,7 @@ void stage_load(uint16_t id) {
     enable_ints;
 
 	//if((playerEquipment & EQUIP_CLOCK) || stageID == STAGE_HELL_B1) system_draw_counter();
-	//tsc_load_stage(id);
+	tsc_load_stage(id);
 	//vdp_set_display(TRUE);
 	setPaletteColor(0, 0);
 

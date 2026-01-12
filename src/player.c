@@ -92,7 +92,7 @@ uint8_t iSuckAtThisGameSHIT = 0;
 uint8_t missileEmptyFlag = 0;
 
 static void player_update_booster();
-static void player_update_interaction();
+void player_update_interaction();
 static void player_update_air_display();
 
 static void player_update_movement();
@@ -218,6 +218,15 @@ void manual_oam_upload() {
     REG_OAMADDH = 0; 
 
     LoadOAMCopy((char *)GLOBAL_OAMCopy.Bytes, 0x0000, sizeof(union uOAMCopy));
+}
+void manual_oam_clear(void) {
+    // Zero out the entire structure (sets X, Tile, Props, and High Table to 0)
+    memset(&GLOBAL_OAMCopy, 0, sizeof(GLOBAL_OAMCopy));
+
+    // Specifically set all Y coordinates to 224 to hide them
+    for (uint16_t i = 0; i < 128; i++) {
+        GLOBAL_OAMCopy.arr.OAMArray[i].OBJY = 224;
+    }
 }
 void player_draw() {
     // 1. Calculate Screen Coordinates
@@ -895,9 +904,9 @@ void player_update_bullets() {
 	}
 }
 
-static void player_update_interaction() {
+void player_update_interaction() {
 	// Interaction with entities when pressing down
-	/*if(cfg_updoor ? joy_pressed(KEY_UP) : joy_pressed(KEY_DOWN)) {
+	if(cfg_updoor ? joy_pressed(KEY_UP) : joy_pressed(KEY_DOWN)) {
 		Entity *e = entityList;
 		while(e) {
 			if((e->flags & NPC_INTERACTIVE) && entity_overlapping(&player, e)) {
@@ -917,7 +926,7 @@ static void player_update_interaction() {
 		}
 		// Question mark above head
 		effect_create_misc(EFF_QMARK, (player.x >> CSF), (player.y >> CSF) - 12, TRUE);
-	}*/
+	}
 }
 
 void player_start_booster() {
