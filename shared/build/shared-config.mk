@@ -296,10 +296,16 @@ endif
 
 # VBCC65816 Source Configuration
 ifneq ($(filter vbcc65816 vbcc_classic,$(COMPILER_LOWER)),)
-    PROJECT_C_FILES = $(wildcard *.c)
+    # 1. Source Discovery: Look in root, src, src/db, and src/ai
+    PROJECT_C_FILES = $(wildcard *.c) $(wildcard src/*.c) $(wildcard src/db/*.c) $(wildcard src/ai/*.c)
     C_SOURCES = $(PROJECT_C_FILES) $(SHARED_SRC_DIR)/initsnes.c
     ASM_SOURCES = snesmod_api.s
-    PROJECT_OBJECTS = $(addprefix $(BUILD_DIR)/,$(addsuffix .o,$(basename $(PROJECT_C_FILES))))
+    
+    # 2. Object Generation: 
+    # We use $(notdir ...) to flatten the paths. 
+    # e.g., src/db/data.c becomes build/data.o, not build/src/db/data.o
+    # This ensures the existing build rules (which only mkdir build/) still work.
+    PROJECT_OBJECTS = $(addprefix $(BUILD_DIR)/,$(notdir $(patsubst %.c,%.o,$(PROJECT_C_FILES))))
     
     # NEW: Add the soundbank object specifically
     AUDIO_OBJ =
@@ -310,7 +316,8 @@ ifneq ($(filter vbcc65816 vbcc_classic,$(COMPILER_LOWER)),)
     OBJECTS = $(PROJECT_OBJECTS) $(BUILD_DIR)/initsnes.o \
               $(BUILD_DIR)/snesmod_api.o $(AUDIO_OBJ)
               
-    vpath %.c $(SHARED_SRC_DIR) .
+    # 3. VPATH: Tell Make where to look for .c files when compiling
+    vpath %.c src/ai src/db src $(SHARED_SRC_DIR) .
     vpath %.s res/  # Ensure vpath can find your new .s file
 endif
 

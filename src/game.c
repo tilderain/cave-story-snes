@@ -78,15 +78,15 @@ void game_reset(uint8_t load) {
 	//vdp_colors_next(16, PAL_Sym.data, 16);
 	//vdp_colors(0, PAL_FadeOut, 64);*/
 }
-
+#include "snesmod.h"
+#include "audio_data.h"
 u8 pal_mode = 0;
 // joytype is defined in joy.c, declared in joy.h
    		u8 stage_no = 14;
-u8 music = 1;
+u8 music = MOD_CAVE;
 
 
-#include "snesmod.h"
-#include "audio_data.h"
+
 //#include "res/soundbank.h"
 extern unsigned char soundbank_Access;
 extern unsigned char soundbank_Balcony;
