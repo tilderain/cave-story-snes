@@ -98,7 +98,7 @@ void bgInitTileSet(uint8_t bgNumber, const uint8_t *tileSource, const uint8_t *t
     if (colorMode == BG_16COLORS) {
         // Standard 16 color mode logic from ASM
         // If paletteEntry is used, it maps to specific rows
-        cgramOffset = (bgNumber * 16 * 2) + (paletteEntry * 16 * 2); 
+        cgramOffset = (paletteEntry * 16); 
     } else {
         // 256 Color mode logic
         cgramOffset = paletteEntry * 2; 

@@ -41,10 +41,10 @@ typedef struct {
 // The IDs deviate from the original game. I do not know the "correct" order
 #define BACKGROUND_COUNT 17
 typedef struct {
-	uint32_t tileset; // Graphical tile data to load
+	const unsigned char* tileset; // Graphical tile data to load
 	// Backgrounds do not use their own palette and instead "share" with any other of the
 	// 4 already loaded. This value specifies which, like PAL0, PAL1, etc
-	uint32_t palette;
+	const unsigned char* palette;
 	// The "type" is which behavior/algorithm to use when loading/scrolling the background
 	// 0 - Draw a plain tiled image into VDP_PLAN_B
 	// 1 - Moon/Fog - Draw from a specified pattern into VDP_PLAN_B and scroll the clouds

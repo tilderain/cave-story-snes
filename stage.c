@@ -921,7 +921,7 @@ u8 ind2 = 0;
 void stage_draw_background() {
 	uint16_t w = background_info[stageBackground].width;
 	uint16_t h = background_info[stageBackground].height;
-	uint16_t pal = background_info[stageBackground].palette;
+	uint16_t pal = (uint16_t)background_info[stageBackground].palette;
 	uint16_t y, x;
 	test_draw_sequential();
 	//vdp_vsync();

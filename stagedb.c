@@ -115,9 +115,3 @@ const stage_info_def stage_info[STAGE_COUNT] = {
 const npc_info_def npc_info[NPC_COUNT] = {
 	{ NULL, NOSHEET, 0, 0, NULL, NULL, NULL, {0} }
 };
-
-// Stub definition for background_info - was previously in pvsneslib_compat.c
-// Initialize all entries with zeros - C will zero-initialize remaining elements
-const background_info_def background_info[BACKGROUND_COUNT] = {
-	{ 0, 0, 0, 0, 0 }
-};
