@@ -316,6 +316,7 @@ static void camera_handle_morphing(int32_t *x_next, int32_t *y_next) {
 	if(!morphingColumn && (abs(camera.x_mark - *x_next) > 0x1FFF || abs(camera.y_mark - *y_next) > 0x1FFF)) {
 		camera.x_mark = *x_next;
 		camera.y_mark = *y_next;
+		entities_update_inactive();
 	}
 }
 

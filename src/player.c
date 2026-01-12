@@ -139,7 +139,10 @@ void player_init() {
 	playerEquipment = 0; // Nothing equipped
 	uint8_t i;
 	for( i = 0; i < MAX_ITEMS; i++) playerInventory[i] = 0; // Empty inventory
-	for( i = 0; i < MAX_WEAPONS; i++) playerWeapon[i].type = 0; // No Weapons
+		for(uint8_t i = 0; i < MAX_WEAPONS; i++) {
+		playerWeapon[i].type = 4; // No Weapons
+		playerWeapon[i].level = 3;
+	}
 
 	playerMoveMode = 0;
 	currentWeapon = 0;
@@ -173,6 +176,8 @@ void player_init() {
 		.size = SPRITE_SIZE(2,2),
 		.attr = TILE_ATTR(PAL0,0,0,1,TILE_PLAYERINDEX)
 	};*/
+
+
 }
 union uOAMCopy GLOBAL_OAMCopy;
 static uint8_t calcOAMTable2Byte(uint8_t index, uint8_t sizeBit, uint8_t xBit, uint8_t currentByte)
@@ -900,6 +905,10 @@ void player_update_bullets() {
             } else {
                 playerBullet[i].extent = (extent_box) {0};
             }
+				int x = (playerBullet[i].x>>CSF) - camera.x_shifted;
+				int y = (playerBullet[i].y>>CSF) - camera.y_shifted;
+				extern u8 id;
+				manual_oam_set(id++, x, y, 3, 0, 0, 0, 0, 1);
 		}
 	}
 }
