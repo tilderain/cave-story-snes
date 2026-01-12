@@ -28,6 +28,12 @@
 //#include "gba.h"
 
 /* Linked List Macros */
+#define MAX_ENTITIES 256
+#define MAX_SPRITES_PER_ENTITY 8  // Adjust based on your needs
+
+static uint8_t entity_pool[MAX_ENTITIES][sizeof(Entity) + sizeof(VDPSprite) * MAX_SPRITES_PER_ENTITY];
+static uint8_t entity_pool_used[MAX_ENTITIES];
+
 
 #define LIST_PUSH(list, obj) do {                                                             \
 	obj->next = list;                                                                          \
@@ -52,7 +58,12 @@
 	while(list) {                                                                              \
 		temp = list;                                                                           \
 		LIST_REMOVE(list, list);                                                               \
-		free(temp);                                                                            \
+		for(uint16_t i = 0; i < MAX_ENTITIES; i++) {                                          \
+			if((Entity*)entity_pool[i] == temp) {                                             \
+				entity_pool_used[i] = 0;                                                      \
+				break;                                                                         \
+			}                                                                                  \
+		}                                                                                      \
 	}                                                                                          \
 } while(0)
 
@@ -132,19 +143,29 @@ void entity_reactivate(Entity *e) {
 Entity *entity_delete(Entity *e) {
 	Entity *next = e->next;
 	LIST_REMOVE(entityList, e);
-	// If we had tile allocation release it for future generations to use
 	if(e->tiloc != NOTILOC) {
 		TILOC_FREE(e->tiloc, e->framesize);
 		e->tiloc = NOTILOC;
 	}
-	free(e);
+	// Free from pool
+	for(uint16_t i = 0; i < MAX_ENTITIES; i++) {
+		if((Entity*)entity_pool[i] == e) {
+			entity_pool_used[i] = 0;
+			break;
+		}
+	}
 	return next;
 }
-
 Entity *entity_delete_inactive(Entity *e) {
 	Entity *next = e->next;
 	LIST_REMOVE(inactiveList, e);
-	free(e);
+	// Free from pool
+	for(uint16_t i = 0; i < MAX_ENTITIES; i++) {
+		if((Entity*)entity_pool[i] == e) {
+			entity_pool_used[i] = 0;
+			break;
+		}
+	}
 	return next;
 }
 
@@ -976,31 +997,37 @@ uint8_t get_sprite_count(uint16_t type)
 }
 
 Entity *entity_create_ext(int32_t x, int32_t y, uint16_t type, uint16_t flags, uint16_t id, uint16_t event) {
-	// Allocate memory and start applying values
-
-	const AnimationFrame *f = get_animation_frame(type);
-	uint8_t sprite_count = f->numSprite;
-	if(!npc_info[type].sprite_count) sprite_count = 0;
-
-		//Minimum 4 sprites
-	Entity *e = malloc(sizeof(Entity) + sizeof(VDPSprite) * sprite_count + (sizeof(VDPSprite)*4));
-	//if(!e) error_oom();
-	memset(e, 0, sizeof(Entity) + sizeof(VDPSprite) * sprite_count + (sizeof(VDPSprite)*4));
+	// Find free entity in pool
+	Entity *e = NULL;
+	for(uint16_t i = 0; i < MAX_ENTITIES; i++) {
+		if(!entity_pool_used[i]) {
+			e = (Entity*)entity_pool[i];
+			entity_pool_used[i] = 1;
+			break;
+		}
+	}
+	if(!e) return NULL; // Pool exhausted
+	
+	memset(e, 0, sizeof(Entity) + sizeof(VDPSprite) * MAX_SPRITES_PER_ENTITY);
 	e->x = x;
 	e->y = y;
 	e->id = id;
 	e->event = event;
-	e->sprite_count = sprite_count;
+
+	const AnimationFrame *f = get_animation_frame(type);
+	e->sprite_count = f->numSprite;
+	if(!npc_info[type].sprite_count) e->sprite_count = 0;
+	
 	entity_default(e, type, flags);
 
 	if(npc_info[type].sprite_count) {
-		if(npc_info[type].sheet != NOSHEET) { // Sheet
+		if(npc_info[type].sheet != NOSHEET) {
 			SHEET_FIND(e->sheet, npc_info[type].sheet);
 			e->vramindex = sheets[e->sheet].index;
 			e->framesize = sheets[e->sheet].w * sheets[e->sheet].h;
 			uint16_t tile_offset = 0;
 			uint8_t i;
-			for( i = 0; i < sprite_count; i++) {
+			for( i = 0; i < e->sprite_count; i++) {
 				e->sprite[i] = (VDPSprite) {
 					.size = f->vdpSpritesInf[i]->size,
 					.attr = TILE_ATTR(npc_info[type].palette,0,0,0,
@@ -1009,15 +1036,14 @@ Entity *entity_create_ext(int32_t x, int32_t y, uint16_t type, uint16_t flags, u
 				tile_offset += f->vdpSpritesInf[i]->numTile;
 			}
 			e->oframe = 255;
-		} else if(npc_info[type].sprite) { // Use our own tiles
-
+		} else if(npc_info[type].sprite) {
 			e->framesize = f->tileset->numTile;
 			TILOC_ADD(e->tiloc, e->framesize);
 			if(e->tiloc != NOTILOC) {
 				e->vramindex = tiloc_index + e->tiloc * 4;
 				uint16_t tile_offset = 0;
 				uint8_t i;
-				for( i = 0; i < sprite_count; i++) {
+				for( i = 0; i < e->sprite_count; i++) {
 					e->sprite[i] = (VDPSprite) {
 						.size = f->vdpSpritesInf[i]->size,
 						.attr = TILE_ATTR(npc_info[type].palette,0,0,0,
