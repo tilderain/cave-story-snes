@@ -329,9 +329,11 @@ void game_main(uint8_t load) {
     REG_CGADD = 0;
     REG_CGDATA = 0x00;
     REG_CGDATA = 0x00;
-		
+		//consoleClear();
 		vdp_vsync();
 
+		//consoleDrawText(5, 14, "the biggest TEST");
+		consoleVblank();
 	REG_CGADD = 0; // Palette Index 0
     REG_CGDATA = 0xff; // Pure Green (5-bit BGR: 00000 01111 00000)
     REG_CGDATA = 0x00;
@@ -367,6 +369,8 @@ void game_main(uint8_t load) {
 		bgSetEnable(0);
 		REG_TM = 0x1f;
 		manual_oam_clear();
+
+
 		stage_update();
 		joy_update();
 		//PF_BGCOLOR(0x00E);

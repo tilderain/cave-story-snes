@@ -76,7 +76,7 @@ void window_draw_face();
 
 void window_open(uint8_t mode) {
 	mapNameTTL = 0; // Hide map name to avoid tile conflict
-	//window_clear_text();
+	window_clear_text();
 	if(cfg_language >= LANG_JA && cfg_language <= LANG_KO) {
 	//	const uint32_t *data = &TS_MsgFont.tiles[('_' - 0x20) << 3];
 	//	vdp_tiles_load_from_rom(data, (0xB000 >> 5) + 3 + (29 << 2), 1);
@@ -123,7 +123,7 @@ uint8_t window_is_open() {
 }
 
 void window_clear() {
-	iprintf("\x1b[2J");
+	//iprintf("\x1b[2J");
 	uint8_t x = showingFace ? TEXT_X1_FACE : TEXT_X1;
 	uint8_t y = windowOnTop ? TEXT_Y1_TOP : TEXT_Y1;
 	uint8_t w = showingFace ? 29 : 36;
@@ -138,6 +138,7 @@ void window_clear() {
 }
 
 void window_clear_text() {
+	consoleClear();
 	textRow = textColumn = spaceCounter = spaceOffset = 0;
 	memset(windowText, ' ', 36*3);
    // cjk_reset(CJK_MESSAGE);
@@ -148,6 +149,7 @@ void window_close() {
 	    vdp_set_window(0, 0);
         //hud_force_redraw();
 	}
+	window_clear_text();
 	showingItem = 0;
 	windowOpen = FALSE;
     //if(textMode == TM_MSG) textMode = TM_NORMAL;
@@ -167,7 +169,8 @@ void window_set_face(uint16_t face, uint8_t open) {
 
 void window_draw_char(uint8_t c) {
 	//GBATODO
-	iprintf("%c", c);
+	//iprintf("%c", c);
+
 
 	if(c == '\n') {
 		textRow++;
@@ -201,9 +204,12 @@ void window_draw_char(uint8_t c) {
              //       TILE_FONTINDEX + c - 0x20), msgTextX, msgTextY);
 			vdp_map_xy(VDP_PLAN_W, TILE_ATTR(PAL0, 1, 0, 0,
                     c), msgTextX, msgTextY);
+			consoleDrawText(msgTextX, msgTextY, "%c", c);
+
         }
 		textColumn++;
 		if(spaceCounter % 5 == 1 || spaceCounter == 2) spaceOffset++;
+		
 	}
 }
 

@@ -51,9 +51,12 @@ int main(void)
 
 
     // Initialize text console with our font
-    //consoleSetTextMapPtr(0x6000);
-    //consoleSetTextGfxPtr(0x3000);
-    //consoleInitText(1, 16 * 2, &snesfont, &snespal);
+    consoleSetTextMapPtr(0x6800);
+    consoleSetTextGfxPtr(0x4000);
+    consoleInitText(1, 16 * 2, &snesfont, &snespal);
+    consoleClear();
+
+    //consoleDrawText(5, 14, "Effect: tada            ");
     // Set give soundbank
   //  spcSetBank(&SOUNDBANK__);
     // allocate around 10K of sound ram (39 256-byte blocks)

@@ -47,14 +47,6 @@ void setScreenOff(void) {
     REG_INIDISP = 0x80; // Force blank
 }
 
-void consoleInit(void) {
-    // Stub - console functionality not needed for game
-}
-
-void consoleDrawText(uint8_t x, uint8_t y, const char *text) {
-    // Stub - console text not needed for game
-    (void)x; (void)y; (void)text;
-}
 
 // --- Initialization & Control ---
 
@@ -317,7 +309,7 @@ uint16_t vdp_get_vblank(void) {
 
 // Minimal printf implementation - only supports %d, %u, %x, %X, %s, %c, %%
 // This avoids pulling in the entire standard library
-static void minimal_vsprintf(char *buf, const char *format, va_list ap) {
+void minimal_vsprintf(char *buf, const char *format, va_list ap) {
     char *p = buf;
     const char *f = format;
     char num_buf[32];
@@ -418,7 +410,7 @@ void setMode(uint8_t mode, uint8_t bgSize) {
     // e = mode 1 BG3 priority bit
     // mmm = BG mode (0-7)
     uint8_t bgmode_value = (mode & 0x07) | ((bgSize & 0x0F) << 4);
-    REG_BGMODE = bgmode_value;
+    REG_BGMODE = bgmode_value | 0x08;
     
     // Configure screen base addresses for tilemaps
     // BG1SC format: aaaa aayx
@@ -438,6 +430,8 @@ void setMode(uint8_t mode, uint8_t bgSize) {
     // 0x4000 byte = 0x2000 word = 2 * 0x1000, so both BG1 and BG2 = 2 = 0x02
     // Value = (BG2 << 4) | BG1 = (2 << 4) | 2 = 0x22
     REG_BG12NBA = 0x22;  // BG1 and BG2 tiles at 0x4000 (byte) = 0x2000 (word)
+
+
 }
 
 // Enable/disable background layer - SNES native implementation
