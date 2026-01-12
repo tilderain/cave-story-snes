@@ -10,7 +10,7 @@
 //#include "joy.h"
 //#include "memory.h"
 #include "npc.h"
-//#include "player.h"
+#include "player.h"
 //#include "resources.h"
 //#include "sheet.h"
 //#include "string.h"
@@ -282,7 +282,7 @@ void stage_load(uint16_t id) {
 	// Load stage PXM into RAM
 	stage_load_blocks();
 	// Move camera to player's new position
-	//camera_set_position(player.x, player.y - (stageBackgroundType == 3 ? 8<<CSF : 0));
+	camera_set_position(player.x, player.y - (stageBackgroundType == 3 ? 8<<CSF : 0));
 	//camera.target = &player;
 	//camera.x_offset = 0;
 	//camera.y_offset = 0;
