@@ -96,7 +96,7 @@ ifeq ($(COMPILER_LOWER),vbcc65816)
     
     # 3. Compiler Flags (Compilation only)
     CCFLAGS = +snes-hi -lm -maxoptpasses=300 -O3 -inline-depth=1000 -unroll-all -fp-associative -force-statics -range-opt -I"$(SHARED_SRC_DIR)" -I"lib" -I"include" -I"elua-0.9/inc" -I"elua-0.9/inc/snes" -I"elua-0.9/src/lua" -I"elua-0.9/inc/newlib" -D__VBCC__=1 -DLUA_CROSS_COMPILER -D__VBCC65816__ -c \
-		-I"$(SHARED_SRC_DIR)" -I"lib" -I"include" -Isrc
+		-I"$(SHARED_SRC_DIR)" -I"lib" -I"include" -Isrc -snes-muldiv
     ASFLAGS = -816 -quiet -nowarn=62 -opt-branch -ldots -Fvobj -underscore
     
     # 4. Linker Flags (Direct vlink arguments)
