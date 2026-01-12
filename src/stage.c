@@ -219,7 +219,7 @@ void stage_load(uint16_t id) {
 	stageID = id;
 	// Clear out or deactivate stuff from the old stage
 	//effects_clear();
-	//entities_clear();
+	entities_clear();
 	if(stageTable) {
 		//free(stageTable);
 		//stageTable = NULL;
@@ -295,7 +295,8 @@ void stage_load(uint16_t id) {
     //z80_release();
     enable_ints;
 
-	/*stage_load_entities(); // Create entities defined in the stage's PXE
+	stage_load_entities(); // Create entities defined in the stage's PXE
+	setScreenOn();
 	// For rooms where the boss is always loaded
 	if(stageID == STAGE_WATERWAY_BOSS) {
 		bossEntity = entity_create(0, 0, 360 + BOSS_IRONHEAD, 0);
@@ -313,9 +314,9 @@ void stage_load(uint16_t id) {
     z80_release();
     enable_ints;
 
-	if((playerEquipment & EQUIP_CLOCK) || stageID == STAGE_HELL_B1) system_draw_counter();
-	tsc_load_stage(id);*/
-	vdp_set_display(TRUE);
+	//if((playerEquipment & EQUIP_CLOCK) || stageID == STAGE_HELL_B1) system_draw_counter();
+	//tsc_load_stage(id);
+	//vdp_set_display(TRUE);
 	setPaletteColor(0, 0);
 
 }
@@ -534,7 +535,7 @@ void stage_load_entities() {
 			vdp_set_display(FALSE);
 		}
 	#endif
-	//	entity_create_ext(block_to_sub(x) + 0x1000, block_to_sub(y) + 0x1000, type, flags, id, event);
+		entity_create_ext(block_to_sub(x) + 0x1000, block_to_sub(y) + 0x1000, type, flags, id, event);
 	}
 }
 

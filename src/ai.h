@@ -97,7 +97,7 @@
 	}                                                                                          \
 }
 
-#define SCREEN_FLASH(numframes) vdp_fade(PAL_FullWhite, NULL, numframes, TRUE);
+#define SCREEN_FLASH(numframes) //vdp_fade(PAL_FullWhite, NULL, numframes, TRUE);
 
 /* Shared Variables */
 

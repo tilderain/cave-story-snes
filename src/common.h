@@ -19,7 +19,7 @@ typedef uint32_t u32;
 
 // PVSneslib to snesXC function compatibility stubs
 void consoleNocashMessage(const char *format, ...); // For iprintf
-#define iprintf //consoleNocashMessage
+#define iprintf consoleNocashMessage
 
 // PVSneslib constants
 #define BG_16COLORS 16

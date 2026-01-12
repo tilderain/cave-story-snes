@@ -187,6 +187,7 @@ uint16_t entities_count() {
 	return entities_count_active() + entities_count_inactive();
 }
 
+u8 id = 1;
 IWRAM_CODE void entities_update(uint8_t draw) {
 	uint16_t new_active_count = 0;
 	Entity *e = entityList;
@@ -327,68 +328,70 @@ IWRAM_CODE void entities_update(uint8_t draw) {
 		const AnimationFrame *f = get_animation_frame(e->type);
 		//uint8_t sprite_count = f->numSprite;
 		//if(npc_info[e->type].sprite == NULL) sprite_count = 0;
-		/*if(draw && !e->hidden) {
+		if(draw && !e->hidden) {
+				int x = (e->x>>CSF) - camera.x_shifted - e->display_box.left + e->xoff;
+				int y = (e->y>>CSF) - camera.y_shifted - e->display_box.top;
+				manual_oam_set(id++, x, y, 3, 0, 0, 0, 0, 1);
 			if(e->sheet != NOSHEET) {
-
-
-				int16_t bx = (e->x>>CSF) - camera.x_shifted - e->display_box.left + e->xoff,
-						by = (e->y>>CSF) - camera.y_shifted - e->display_box.top;
-				int16_t x = min(f->vdpSpritesInf[0]->w, 32);
-				if(e->dir)
-					bx = (e->x>>CSF) - camera.x_shifted + e->display_box.left + e->xoff;
-
-				int tile_offset = 0;
-				for(uint16_t i = 0; i < e->sprite_count; i++) {
-					sprite_index(e->sprite[i], e->vramindex + frameOffset[e->sheet][e->frame] + tile_offset);
-					tile_offset += f->vdpSpritesInf[i]->numTile;
-					sprite_hflip(e->sprite[i], e->dir);
-					if(e->dir){
-						sprite_pos(e->sprite[i], bx - x, by + (f->vdpSpritesInf[i]->y));		
-						if(x >= f->w) {
-							x = min(f->vdpSpritesInf[0]->w, 32);
-						} else {
-							x += (f->vdpSpritesInf[i+1]->w);
-						}
-					}
-					else
-					{	
-						sprite_pos(e->sprite[i], bx + (f->vdpSpritesInf[i]->x), by + (f->vdpSpritesInf[i]->y));
-					}
-
-				}
+				sprite_pos(e->sprite[0],
+						(e->x>>CSF) - camera.x_shifted - e->display_box.left + e->xoff,
+						(e->y>>CSF) - camera.y_shifted - e->display_box.top);
+				sprite_index(e->sprite[0], e->vramindex + frameOffset[e->sheet][e->frame]);
+				sprite_hflip(e->sprite[0], e->dir);
+				
+				int x = (e->x>>CSF) - camera.x_shifted - e->display_box.left + e->xoff;
+				int y = (e->y>>CSF) - camera.y_shifted - e->display_box.top;
+				x = (x + 4) / 8; y = (y + 80) / 8;
+				manual_oam_set(id++, x, y, 3, 0, 0, 0, 0, 1);
+				//iprintf("\x1b[%hu;%huH%s\n", y, x, "1");
+				//iprintf("ent %d %d ", x, y);
 			} else if(e->tiloc != NOTILOC) {
-
+				const AnimationFrame *f = npc_info[e->type].sprite->animations[0]->frames[e->frame];
 				if(e->frame != e->oframe) {
 					e->oframe = e->frame;
-					TILES_QUEUE(SPR_TILES(npc_info[e->type].sprite, 0, e->frame), e->vramindex, e->framesize);
+					TILES_QUEUE(f->tileset->tiles, e->vramindex, e->framesize);
 				}
 				// We can't just flip the vdpsprites, gotta draw them in backwards order too
 				if(e->dir) {
 					int16_t bx = (e->x>>CSF) - camera.x_shifted + e->display_box.left + e->xoff, 
 							by = (e->y>>CSF) - camera.y_shifted - e->display_box.top;
-					int16_t x = min(f->vdpSpritesInf[0]->w, 32);
+					int16_t x = min(f->w, 32);
 					for(uint16_t i = 0; i < e->sprite_count; i++) {
-						sprite_pos(e->sprite[i], bx - x, by + (f->vdpSpritesInf[i]->y));
+						sprite_pos(e->sprite[i], bx - x, by);
 						sprite_hflip(e->sprite[i], 1);
-
+					int xx = bx - x;
+					int y = by;
+					xx = (xx + 4) / 8; y = (y + 80) / 8;
+					manual_oam_set(id++, xx, y, 3, 0, 0, 0, 0, 1);
 						if(x >= f->w) {
-							x = min(f->vdpSpritesInf[0]->w, 32);
+							x = min(f->w, 32);
+							by += 32;
 						} else {
-							x += (f->vdpSpritesInf[i+1]->w);
+							x += min(f->w - x, 32);
 						}
 					}
 				} else {
 					int16_t bx = (e->x>>CSF) - camera.x_shifted - e->display_box.left + e->xoff, 
 							by = (e->y>>CSF) - camera.y_shifted - e->display_box.top;
-					//int16_t x = 0;
+					int16_t x = 0;
 					for(uint16_t i = 0; i < e->sprite_count; i++) {
-						sprite_pos(e->sprite[i], bx + (f->vdpSpritesInf[i]->x), by + (f->vdpSpritesInf[i]->y));
+						sprite_pos(e->sprite[i], bx + x, by);
 						sprite_hflip(e->sprite[i], 0);
+
+						int xx = bx + x;
+						int y = by;
+						xx = (xx + 4) / 8; y = (y + 80) / 8;
+						manual_oam_set(id++, xx, y, 3, 0, 0, 0, 0, 1);
+						x += 32;
+						if(x >= f->w) {
+							x = 0;
+							by += 32;
+						}
 					}
 				}
 			}
 			vdp_sprites_add(e->sprite, e->sprite_count);
-		}*/
+		}
 		if(moveMeToFront) {
 			moveMeToFront = FALSE;
 			Entity *next = e->next;
@@ -1139,15 +1142,107 @@ uint8_t entity_exists(uint16_t type) {
 }
 
 void entities_draw() {
-	const Entity *e = entityList;
-	while(e) {
-		if(!e->hidden) {
-		vdp_sprites_add(e->sprite, e->sprite_count);
-		}
-		e = e->next;
-	}
-}
+    Entity *e = entityList;
+    
+    // Start OAM allocation after player (index 0)
+    // We rely on vdp.c's internal counter, but we need to ensure it skips 0 if player uses it manually.
+    // Actually, vdp_sprites_clear() resets to 0. 
+    // If player_draw() is called first and uses index 0 manually, we need to make sure vdp_sprites_add
+    // doesn't overwrite it. 
+    // Ideally, player should also use vdp_sprites_add or increment the counter.
+    // For now, let's assume player uses 0, and we should start allocating from 1.
+    // Hack: We can just burn index 0 in vdp_sprites_clear or assume player_draw increments it?
+    // manual_oam_set doesn't increment the counter automatically.
+    // Let's manually reserve index 0 in vdp_sprites_clear or just start loop at 1?
+    // Better: manual_oam_set takes an ID. vdp_sprites_add uses a counter.
+    // We should sync them.
+    
+    // For this specific request, let's calculate positions and draw.
+    
+    // We need a variable to track the next available OAM slot for entities.
+    // Since player uses 0, we start at 1.
+    uint8_t entity_oam_id = 1;
 
+    while(e) {
+        if(!e->hidden && entity_on_screen(e)) {
+            const AnimationFrame *f = get_animation_frame(e->type);
+            
+            // Calculate screen position relative to camera
+            // Camera position is in subpixels (CSF)
+            int32_t cam_x = camera.x >> CSF;
+            int32_t cam_y = camera.y >> CSF;
+            int32_t ent_x = e->x >> CSF;
+            int32_t ent_y = e->y >> CSF;
+            
+            // Offset for screen center (assuming 256x224)
+            int16_t screen_x = (int16_t)(ent_x - cam_x + (256/2));
+            int16_t screen_y = (int16_t)(ent_y - cam_y + (224/2));
+            
+            // Adjust for display box / visual center if needed
+            // e->display_box is often used for culling, but here we center.
+            // Usually Cave Story sprites are drawn relative to center-bottom or center.
+            // Let's align center: subtract 8 or 16 depending on size?
+            // Using the logic from the commented out block in entities_update:
+            // int16_t bx = (e->x>>CSF) - camera.x_shifted - e->display_box.left + e->xoff;
+            // camera.x_shifted is roughly camera.x >> CSF - SCREEN_HALF_W.
+            
+            int16_t bx = screen_x - 8 + e->xoff; // -8 to center 16px sprite
+            int16_t by = screen_y - 8;           // -8 to center 16px sprite
+            
+            // Handle direction offset
+            if(e->dir) {
+                // If flipped, sometimes position needs adjustment?
+                // bx = screen_x + e->display_box.left + e->xoff ...
+                // Let's stick to simple centering for now.
+            }
+
+            // Iterate sprites in the metasprite
+            uint16_t tile_offset = 0;
+            for(uint8_t i = 0; i < e->sprite_count; i++) {
+                if (entity_oam_id >= 128) break;
+
+                // Basic 16x16 sprite assumption
+                uint16_t tile = e->vramindex + tile_offset;
+                if(e->sheet != NOSHEET) {
+                     tile += frameOffset[e->sheet][e->frame];
+                }
+                
+                // Add sub-sprite offset from AnimationFrame if available
+                // f->vdpSpritesInf[i]->x / y
+                int16_t final_x = bx;
+                int16_t final_y = by;
+                
+                if (f && i < f->numSprite) {
+                    // Adjust position based on frame definition
+                    if (e->dir) {
+                        // Flipped X layout logic... simplified here:
+                        final_x -= (f->vdpSpritesInf[i]->x); // Approximate flip
+                    } else {
+                        final_x += f->vdpSpritesInf[i]->x;
+                    }
+                    final_y += f->vdpSpritesInf[i]->y;
+                    
+                    // Add tile offset
+                    tile_offset += f->vdpSpritesInf[i]->numTile;
+                }
+
+                // Call Manual OAM Set
+                // Priority 2 (below player), Palette from NPC info
+                // Size 1 (16x16)
+                manual_oam_set(entity_oam_id++, 
+                               final_x, 
+                               final_y, 
+                               2,               // Priority
+                               e->dir,          // HFlip (1=Right usually)
+                               0,               // VFlip
+                               tile, 
+                               npc_info[e->type].palette, 
+                               1);              // Size (Large)
+            }
+        }
+        e = e->next;
+    }
+}
 void generic_npc_states(Entity *e) {
 	switch(e->state) {
 		case 0:		// stand

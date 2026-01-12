@@ -205,8 +205,6 @@ int random(void);
 void oamUpdate(void);
 void oamSet(uint8_t id, int16_t x, int16_t y, uint8_t priority, uint8_t hFlip, uint8_t vFlip, uint16_t gfxOffset, uint8_t paletteOffset);
 
-// DMA utilities
-void DMA_flushQueue(void);
 
 // Debug/Console
 void consoleNocashMessage(const char *format, ...);

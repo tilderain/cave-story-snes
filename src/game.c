@@ -54,25 +54,25 @@ void game_reset(uint8_t load) {
 	stage_load(13);
 
 
-	/*
+	
 	vdp_map_clear(VDP_PLAN_B);
 	camera_init();
 	tsc_init();
-	hud_create();
+	//hud_create();
 	// Default sprite sheets
-	sheets_load_stage(255, TRUE, TRUE);
+	//sheets_load_stage(255, TRUE, TRUE);
 
 	gameFrozen = FALSE;
-	if(load >= 4) {
-		system_load_levelselect(load - 4);
-	} else {
-		system_load(sram_file);
-	}
-	const SpriteDefinition *wepSpr = weapon_info[playerWeapon[currentWeapon].type].sprite;
-	if(wepSpr) TILES_QUEUE(SPR_TILES(wepSpr,0,0), TILE_WEAPONINDEX,6);
+	//if(load >= 4) {
+	//	system_load_levelselect(load - 4);
+	//} else {
+	//	system_load(sram_file);
+	//}
+	//const SpriteDefinition *wepSpr = weapon_info[playerWeapon[currentWeapon].type].sprite;
+	//if(wepSpr) TILES_QUEUE(SPR_TILES(wepSpr,0,0), TILE_WEAPONINDEX,6);
 	
-	SHEET_LOAD(&SPR_Bonk, 1, 1, 1, 1, 0,0);
-	SHEET_LOAD(&SPR_QMark, 1, 1, TILE_QMARKINDEX, 1, 0,0);
+	//SHEET_LOAD(&SPR_Bonk, 1, 1, 1, 1, 0,0);
+	//SHEET_LOAD(&SPR_QMark, 1, 1, TILE_QMARKINDEX, 1, 0,0);
 	// Load up the main palettes
 	//vdp_colors_next(0, PAL_Main.data, 16);
 	//vdp_colors_next(16, PAL_Sym.data, 16);
@@ -166,7 +166,7 @@ inline void play_music_track(MusicId id) {
     spcSetModuleVolume(100);
 }
 void game_main(uint8_t load) {
-	camera_init();
+
 
 	player_init();
     play_music_track(music);
@@ -253,7 +253,7 @@ void game_main(uint8_t load) {
                 enable_ints;
 
 				player_draw();
-				//entities_draw();
+				entities_draw();
 				//hud_show();
 				vdp_sprites_update();
 				vdp_set_window(0, 0);
@@ -271,8 +271,7 @@ void game_main(uint8_t load) {
 				}
 				// Run the next set of commands in a script if it is running
                 //PF_BGCOLOR(0x0E0);
-				//uint8_t rtn = tsc_update();
-				u8 rtn = 0;
+				uint8_t rtn = tsc_update();
 				// Nonzero return values exit the game, or switch to the ending sequence
 				if(rtn > 0) {
 					if(rtn == 1) { // Return to title screen
@@ -308,10 +307,11 @@ void game_main(uint8_t load) {
 				if(!gameFrozen) {
 					//GBATODO
 					player_update();
-				//	entities_update(TRUE);
+					entities_update(TRUE);
+					//entities_draw();
 				} else {
 					player_draw();
-				//	entities_draw();
+					entities_draw();
 				}
 				// Restore controller locking if it was locked
 				joystate = lockstate;
@@ -336,6 +336,8 @@ void game_main(uint8_t load) {
     REG_CGDATA = 0xff; // Pure Green (5-bit BGR: 00000 01111 00000)
     REG_CGDATA = 0x00;
 		oamUpdate(); 
+		extern u8 id;
+		id = 1;
 		// Map buffer is updated by stage_draw_screen() when needed, no need to copy every frame
 		camera_execute_dma();
 		//dmaCopyVram(map_buffer_bg1, 0x6000, 4096);

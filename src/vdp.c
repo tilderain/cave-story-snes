@@ -154,11 +154,7 @@ void dmaCopyVram(const void *src, uint16_t dest, uint16_t size) {
     LoadVram((const unsigned char *)src, byteAddr, size);
 }
 
-// Flush DMA queue - SNES native implementation (stub)
-// DMA operations in snesXC are immediate, so this is a no-op
-void DMA_flushQueue(void) {
-    // Stub - DMA operations in snesXC are immediate
-}
+
 
 // --- Tile Management ---
 

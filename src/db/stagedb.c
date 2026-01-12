@@ -109,9 +109,3 @@ const stage_info_def stage_info[STAGE_COUNT] = {
 	{ PXM_e_Blcn,	PXE_e_Blcn,	&PAL_Regu,	21,	0,	"Credits" },
 	{ PXM_Clock,	PXE_Clock,	&PAL_Regu,	15,	7,	"Clock" },
 };
-
-// Stub definition for npc_info - was previously in pvsneslib_compat.c
-// Initialize all entries with zeros/NULLs - C will zero-initialize remaining elements
-const npc_info_def npc_info[NPC_COUNT] = {
-	{ NULL, NOSHEET, 0, 0, NULL, NULL, NULL, {0} }
-};
