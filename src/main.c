@@ -34,6 +34,12 @@ __section("header") const struct cart_header {
 0, 
 0};
 
+volatile uint8_t ready = 0;
+volatile uint8_t vblank = 0;
+
+void aftervsync() {
+
+}
 
 //---------------------------------------------------------------------------------
 int main(void)

@@ -109,7 +109,7 @@
 // FullWhite is used for a TSC instruction that flashes the screen white
 //extern const uint16_t PAL_FullWhite[64];
 // Remember the pal mode flag so we don't have to read the control port every time
-//extern uint8_t pal_mode;
+extern uint8_t pal_mode;
 
 //typedef unsigned char	uint8_t;
 //typedef unsigned short	uint16_t;

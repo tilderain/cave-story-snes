@@ -23,29 +23,6 @@
 
 
 // oldstate is defined in joy.c, declared in joy.h
-uint8_t cfg_btn_jump = 5;
-uint8_t cfg_btn_shoot = 4;
-uint8_t cfg_btn_ffwd = 8;
-uint8_t cfg_btn_rswap = 8;
-uint8_t cfg_btn_lswap = 9;
-uint8_t cfg_btn_map = 10;
-uint8_t cfg_btn_pause = 7;
-
-uint8_t cfg_language = 0;
-uint8_t cfg_ffwd = TRUE;
-uint8_t cfg_updoor = FALSE;
-uint8_t cfg_hellquake = TRUE;
-uint8_t cfg_iframebug = TRUE;
-uint8_t cfg_60fps = TRUE;
-
-uint8_t cfg_force_btn = 0;
-uint8_t cfg_msg_blip = TRUE;
-
-uint8_t cfg_music_mute = FALSE;
-uint8_t cfg_sfx_mute = FALSE;
-
-uint8_t sram_file = 0;
-uint8_t sram_state = SRAM_UNCHECKED;
 
 void effect_create_misc(uint8_t type, int16_t x, int16_t y, uint8_t only_one){}
 

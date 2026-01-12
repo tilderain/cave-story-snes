@@ -80,7 +80,7 @@ void game_reset(uint8_t load) {
 }
 #include "snesmod.h"
 #include "audio_data.h"
-u8 pal_mode = 0;
+u8 pal_mode = 1;
 // joytype is defined in joy.c, declared in joy.h
    		u8 stage_no = 14;
 u8 music = MOD_CAVE;

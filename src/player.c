@@ -106,10 +106,6 @@ static void player_next_weapon();
 extern u8 pal_mode; // Defined in game.c
 // water_entity is defined in entity.c, declared in entity.h
 
-void sound_play(uint8_t id, uint8_t priority)
-{
- 
-}
 void effect_create_smoke(int16_t x, int16_t y){}
 // random() is defined in pvsneslib_compat.c, declared in common.h
 

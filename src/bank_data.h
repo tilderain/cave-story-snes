@@ -803,6 +803,7 @@ extern const uint8_t LS_21[];
 //extern const uint8_t LANGUAGE[4];
 
 //extern const uint32_t TSC_GLOB[4];
+
 //extern const uint32_t TSC_STAGE[95];
 
 //extern const uint32_t BMP_ASCII;
