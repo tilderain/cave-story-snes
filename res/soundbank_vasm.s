@@ -21,14 +21,14 @@ soundbank_BreakDown:
     incbin "res/BreakDown.bnk"
     section _rodata.far.audio5,"a"
     align 16
-    global soundbank_CAVE
-soundbank_CAVE:
-    incbin "res/CAVE.bnk"
-    section _rodata.far.audio6,"a"
-    align 16
     global soundbank_CaveStory
 soundbank_CaveStory:
     incbin "res/CaveStory.bnk"
+    section _rodata.far.audio6,"a"
+    align 16
+    global soundbank_Cemetery
+soundbank_Cemetery:
+    incbin "res/Cemetery.bnk"
     section _rodata.far.audio7,"a"
     align 16
     global soundbank_Charge
@@ -36,125 +36,170 @@ soundbank_Charge:
     incbin "res/Charge.bnk"
     section _rodata.far.audio8,"a"
     align 16
+    global soundbank_EyesofFlame
+soundbank_EyesofFlame:
+    incbin "res/EyesofFlame.bnk"
+    section _rodata.far.audio9,"a"
+    align 16
     global soundbank_Gameover
 soundbank_Gameover:
     incbin "res/Gameover.bnk"
-    section _rodata.far.audio9,"a"
+    section _rodata.far.audio10,"a"
+    align 16
+    global soundbank_Geothermal
+soundbank_Geothermal:
+    incbin "res/Geothermal.bnk"
+    section _rodata.far.audio11,"a"
     align 16
     global soundbank_Gestation
 soundbank_Gestation:
     incbin "res/Gestation.bnk"
-    section _rodata.far.audio10,"a"
+    section _rodata.far.audio12,"a"
     align 16
     global soundbank_GetHeartTank
 soundbank_GetHeartTank:
     incbin "res/GetHeartTank.bnk"
-    section _rodata.far.audio11,"a"
+    section _rodata.far.audio13,"a"
     align 16
     global soundbank_GotItem
 soundbank_GotItem:
     incbin "res/GotItem.bnk"
-    section _rodata.far.audio12,"a"
+    section _rodata.far.audio14,"a"
     align 16
     global soundbank_Gravity
 soundbank_Gravity:
     incbin "res/Gravity.bnk"
-    section _rodata.far.audio13,"a"
+    section _rodata.far.audio15,"a"
     align 16
     global soundbank_HeroEnd
 soundbank_HeroEnd:
     incbin "res/HeroEnd.bnk"
-    section _rodata.far.audio14,"a"
+    section _rodata.far.audio16,"a"
+    align 16
+    global soundbank_Jenka1
+soundbank_Jenka1:
+    incbin "res/Jenka1.bnk"
+    section _rodata.far.audio17,"a"
+    align 16
+    global soundbank_Jenka2
+soundbank_Jenka2:
+    incbin "res/Jenka2.bnk"
+    section _rodata.far.audio18,"a"
+    align 16
+    global soundbank_LabyrinthFight
+soundbank_LabyrinthFight:
+    incbin "res/LabyrinthFight.bnk"
+    section _rodata.far.audio19,"a"
     align 16
     global soundbank_LastBattle
 soundbank_LastBattle:
     incbin "res/LastBattle.bnk"
-    section _rodata.far.audio15,"a"
+    section _rodata.far.audio20,"a"
     align 16
     global soundbank_LastCave
 soundbank_LastCave:
     incbin "res/LastCave.bnk"
-    section _rodata.far.audio16,"a"
+    section _rodata.far.audio21,"a"
+    align 16
+    global soundbank_LivingWaterway
+soundbank_LivingWaterway:
+    incbin "res/LivingWaterway.bnk"
+    section _rodata.far.audio22,"a"
+    align 16
+    global soundbank_Meltdown2
+soundbank_Meltdown2:
+    incbin "res/Meltdown2.bnk"
+    section _rodata.far.audio23,"a"
+    align 16
+    global soundbank_MimigaTown
+soundbank_MimigaTown:
+    incbin "res/MimigaTown.bnk"
+    section _rodata.far.audio24,"a"
+    align 16
+    global soundbank_MischievousRobot
+soundbank_MischievousRobot:
+    incbin "res/MischievousRobot.bnk"
+    section _rodata.far.audio25,"a"
     align 16
     global soundbank_Moonsong
 soundbank_Moonsong:
     incbin "res/Moonsong.bnk"
-    section _rodata.far.audio17,"a"
+    section _rodata.far.audio26,"a"
     align 16
     global soundbank_OntoGrasstown
 soundbank_OntoGrasstown:
     incbin "res/OntoGrasstown.bnk"
-    section _rodata.far.audio18,"a"
+    section _rodata.far.audio27,"a"
     align 16
     global soundbank_Oppression
 soundbank_Oppression:
     incbin "res/Oppression.bnk"
-    section _rodata.far.audio19,"a"
+    section _rodata.far.audio28,"a"
+    align 16
+    global soundbank_Plant
+soundbank_Plant:
+    incbin "res/Plant.bnk"
+    section _rodata.far.audio29,"a"
     align 16
     global soundbank_Pulse
 soundbank_Pulse:
     incbin "res/Pulse.bnk"
-    section _rodata.far.audio20,"a"
+    section _rodata.far.audio30,"a"
     align 16
     global soundbank_Quiet
 soundbank_Quiet:
     incbin "res/Quiet.bnk"
-    section _rodata.far.audio21,"a"
+    section _rodata.far.audio31,"a"
     align 16
     global soundbank_Run
 soundbank_Run:
     incbin "res/Run.bnk"
-    section _rodata.far.audio22,"a"
+    section _rodata.far.audio32,"a"
     align 16
     global soundbank_RunningHell
 soundbank_RunningHell:
     incbin "res/RunningHell.bnk"
-    section _rodata.far.audio23,"a"
+    section _rodata.far.audio33,"a"
+    align 16
+    global soundbank_Safety
+soundbank_Safety:
+    incbin "res/Safety.bnk"
+    section _rodata.far.audio34,"a"
     align 16
     global soundbank_ScorchingBack
 soundbank_ScorchingBack:
     incbin "res/ScorchingBack.bnk"
-    section _rodata.far.audio24,"a"
+    section _rodata.far.audio35,"a"
     align 16
     global soundbank_SealChamber
 soundbank_SealChamber:
     incbin "res/SealChamber.bnk"
-    section _rodata.far.audio25,"a"
+    section _rodata.far.audio36,"a"
     align 16
     global soundbank_TheWayBackHome
 soundbank_TheWayBackHome:
     incbin "res/TheWayBackHome.bnk"
-    section _rodata.far.audio26,"a"
+    section _rodata.far.audio37,"a"
+    align 16
+    global soundbank_Toroko
+soundbank_Toroko:
+    incbin "res/Toroko.bnk"
+    section _rodata.far.audio38,"a"
     align 16
     global soundbank_Tyrant
 soundbank_Tyrant:
     incbin "res/Tyrant.bnk"
-    section _rodata.far.audio27,"a"
+    section _rodata.far.audio39,"a"
     align 16
     global soundbank_Victory
 soundbank_Victory:
     incbin "res/Victory.bnk"
-    section _rodata.far.audio28,"a"
+    section _rodata.far.audio40,"a"
     align 16
-    global soundbank_VIVI
-soundbank_VIVI:
-    incbin "res/VIVI.bnk"
-    section _rodata.far.audio29,"a"
-    align 16
-    global soundbank_WANPAK2
-soundbank_WANPAK2:
-    incbin "res/WANPAK2.bnk"
-    section _rodata.far.audio30,"a"
-    align 16
-    global soundbank_whatislovee
-soundbank_whatislovee:
-    incbin "res/whatislovee.bnk"
-    section _rodata.far.audio31,"a"
-    align 16
-    global soundbank_whatislove
-soundbank_whatislove:
-    incbin "res/whatislove.bnk"
-    section _rodata.far.audio32,"a"
+    global soundbank_White
+soundbank_White:
+    incbin "res/White.bnk"
+    section _rodata.far.audio41,"a"
     align 16
     global soundbank_Zombie
 soundbank_Zombie:

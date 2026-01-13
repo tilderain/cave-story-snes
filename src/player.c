@@ -202,14 +202,14 @@ void manual_oam_set(uint8_t id, int16_t x, int16_t y, uint8_t priority, uint8_t 
     // 2. Update Low Table (X, Y, Tile, Attributes)
     GLOBAL_OAMCopy.arr.OAMArray[id].OBJX = (uint8_t)x;
     GLOBAL_OAMCopy.arr.OAMArray[id].OBJY = (uint8_t)y;
-    GLOBAL_OAMCopy.arr.OAMArray[id].CHARNUM = (uint8_t)(tile & 0xFF);
+    //GLOBAL_OAMCopy.arr.OAMArray[id].CHARNUM = (uint8_t)(tile & 0xFF);
 
     // Properties byte: vhopppcc
     // c = 9th bit of tile index
-    uint8_t props = (vFlip << 7) | (hFlip << 6) | (priority << 4) | (palette << 1);
-    props |= (uint8_t)((tile >> 8) & 0x01);
+    //uint8_t props = (vFlip << 7) | (hFlip << 6) | (priority << 4) | (palette << 1);
+    //props |= (uint8_t)((tile >> 8) & 0x01);
     
-    GLOBAL_OAMCopy.arr.OAMArray[id].PROPERTIES = props;
+    GLOBAL_OAMCopy.arr.OAMArray[id].PROPERTIES = (priority << 4);
 }
 
 void manual_oam_upload() {
@@ -226,12 +226,12 @@ void manual_oam_upload() {
 }
 void manual_oam_clear(void) {
     // Zero out the entire structure (sets X, Tile, Props, and High Table to 0)
-    memset(&GLOBAL_OAMCopy, 0, sizeof(GLOBAL_OAMCopy));
+	for(int i = 0; i < 128; i++)
+	{
+		GLOBAL_OAMCopy.arr.OAMArray[i].OBJY = 0xf0;
+	}
+    //memset(&GLOBAL_OAMCopy, 0, sizeof(GLOBAL_OAMCopy));
 
-    // Specifically set all Y coordinates to 224 to hide them
-    for (uint16_t i = 0; i < 128; i++) {
-        GLOBAL_OAMCopy.arr.OAMArray[i].OBJY = 224;
-    }
 }
 void player_draw() {
     // 1. Calculate Screen Coordinates
@@ -316,9 +316,7 @@ void player_draw() {
 	// Set frame if it changed
 	if(player.frame != player.oframe) PLAYER_SPRITE_TILES_QUEUE();
 	// Blink during invincibility frames
-	if(!player.hidden && !(playerIFrames & 2)) {
-		// Change direction if pressing left or right
-		if(playerMoveMode) {
+			if(playerMoveMode) {
 			player.dir = RIGHT;
 		} else if(!controlsLocked) {
 			if(joy_down(KEY_RIGHT)) {
@@ -327,6 +325,9 @@ void player_draw() {
 				player.dir = 0;
 			}
 		}
+	if(!player.hidden && !(playerIFrames & 2)) {
+		// Change direction if pressing left or right
+
 		/*
 		sprite_hflip(playerSprite, player.dir);
 		sprite_pos(playerSprite,

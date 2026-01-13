@@ -82,7 +82,7 @@ void* farMalloc(uint32_t size) {
 void initSNES(uint8_t ROMSPEED){
 
 	int i;
-	volatile uint16_t cCONSTZERO = 0;
+	volatile uint16_t cCONSTZERO = 0xFF;
 	volatile uint16_t* pCONSTZERO = &cCONSTZERO;
 	REG_MEMSEL = ROMSPEED;  // Access Cycle Designation (Slow ROM / Fast ROM)
 
@@ -183,7 +183,7 @@ void initSNES(uint8_t ROMSPEED){
 
 	// Clear CGRAM
 	for(i = 0; i < 256; i++) {
-	//	LoadCGRam((const unsigned char*)pCONSTZERO, i, sizeof(cCONSTZERO));
+		LoadCGRam((const unsigned char*)pCONSTZERO, i, sizeof(cCONSTZERO));
 	}
 
 	// Clear VRAM using existing ClearVram function in chunks

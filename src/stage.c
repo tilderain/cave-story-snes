@@ -94,7 +94,7 @@ void test_draw_sequential() {
     // 1. Pre-calculate constant attributes to avoid shifting in the loop
     // Palette 0, High Priority (1 << 13) = 0x2000
     // We pre-calculate this once.
-    const uint16_t tile_attributes = (1 << 10) | (1 << 13);
+    const uint16_t tile_attributes = (1 << 10) ;
     
     // 2. Cache dimensions in local variables (faster access)
     uint16_t asset_w = background_info[stageBackground].width;
@@ -210,6 +210,7 @@ void loadStageBackground(int index) {
 bgSetEnable(0);         // Explicitly enable BG0
 //setScreenOn();          // Turn on display
 }
+extern char* mariogfx;
 void stage_load(uint16_t id) {
 	iprintf("Loading stage %d\n", id);
 	vdp_set_display(FALSE);
@@ -291,7 +292,7 @@ void stage_load(uint16_t id) {
     //z80_request();
 	//test_draw_sequential(); // Draw 64x32 foreground PXM area at camera's position
 	stage_draw_screen();
-	camera_mark_dma_full_screen();
+	//camera_mark_dma_full_screen();
     //z80_release();
     enable_ints;
 
@@ -317,8 +318,11 @@ void stage_load(uint16_t id) {
 	//if((playerEquipment & EQUIP_CLOCK) || stageID == STAGE_HELL_B1) system_draw_counter();
 	tsc_load_stage(id);
 	//vdp_set_display(TRUE);
+	WaitForVBlank();
 	setPaletteColor(0, 0);
-
+	WaitForVBlank();
+	dmaCopyVram(mariogfx, 0x0000, 32);
+	WaitForVBlank();
 }
 
 void stage_load_credits(uint8_t id) {
@@ -541,11 +545,11 @@ void stage_load_entities() {
 
 // Replaces a block with another (for <CMP, <SMP, and breakable blocks)
 void stage_replace_block(int16_t bx, int16_t by, uint8_t index) {
-	/*stageBlocks[stageTable[by] + bx] = index;
+	stageBlocks[stageTable[by] + bx] = index;
 	int16_t cx = sub_to_block(camera.x), cy = sub_to_block(camera.y);
 	if(cx - 16 > bx || cx + 16 < bx || cy - 8 > by || cy + 8 < by) return;
 	// Only redraw if change was made onscreen
-	stage_draw_block(bx, by);*/
+	stage_draw_block(bx, by);
 }
 extern u8 pal_mode; // Defined in game.c
 // Stage vblank drawing routine
@@ -559,12 +563,12 @@ void stage_update() {
 		stageBackgroundType = 0;
 	}
 	
-	if(stageBackgroundType == 0) {
+	if(true) {
 		vdp_hscroll(VDP_PLAN_A, -sub_to_pixel(camera.x) + SCREEN_HALF_W);
 		vdp_vscroll(VDP_PLAN_A, sub_to_pixel(camera.y) - SCREEN_HALF_H);
 		vdp_hscroll(VDP_PLAN_B, -sub_to_pixel(camera.x) / 4 + SCREEN_HALF_W);
 		vdp_vscroll(VDP_PLAN_B, sub_to_pixel(camera.y) / 4 - SCREEN_HALF_H);
-	} else if(stageBackgroundType == 1 || stageBackgroundType == 5) {
+	} else if(true) {
 		// PLAN_A Tile scroll
 		int16_t off[32];
 		off[0] = -sub_to_pixel(camera.x) + SCREEN_HALF_W;

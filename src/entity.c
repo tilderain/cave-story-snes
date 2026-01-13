@@ -209,220 +209,347 @@ uint16_t entities_count() {
 }
 
 u8 id = 1;
-IWRAM_CODE void entities_update(uint8_t draw) {
-	uint16_t new_active_count = 0;
-	Entity *e = entityList;
-	
-	while(e) {
-		if(!e->alwaysActive && !entity_on_screen(e)) {
-			Entity *next = e->next;
-			entity_deactivate(e);
-			e = next;
-			continue;
-		}
-		new_active_count++;
-		// AI onUpdate method - may set STATE_DELETE
-		ENTITY_ONFRAME(e);
-		if(e->state == STATE_DELETE) {
-			e = entity_delete(e);
-			continue;
-		} else if(e->state == STATE_DESTROY) {
-			e = entity_destroy(e);
-			continue;
-		}
-		//uint16_t flags = e->flags | e->eflags;
-		// Handle Shootable flag - check for collision with player's bullets
-		if(e->flags & NPC_SHOOTABLE) {
-			extent_box ee = (extent_box) {
-				.x1 = (e->x >> CSF) - (e->hit_box.left),
-				.y1 = (e->y >> CSF) - (e->hit_box.top),
-				.x2 = (e->x >> CSF) + (e->hit_box.right),
-				.y2 = (e->y >> CSF) + (e->hit_box.bottom),
-			};
-			uint8_t cont = FALSE;
-			for(uint16_t i = 0; i < MAX_BULLETS; i++) {
-				if(playerBullet[i].ttl &&
-					playerBullet[i].extent.x2 >= ee.x1 &&
-                    playerBullet[i].extent.x1 <= ee.x2 &&
-                    playerBullet[i].extent.y2 >= ee.y1 &&
-					playerBullet[i].extent.y1 <= ee.y2)
-				{	// Collided
-					entity_handle_bullet(e, &playerBullet[i]);
-					if(e->state == STATE_DESTROY) {
-						e = entity_destroy(e);
-						cont = TRUE;
-						break;
-					} else if(e->state == STATE_DELETE) {
-						e = entity_delete(e);
-						cont = TRUE;
-						break;
-					}
-				}
-			}
-			if(cont) continue;
-		}
-		// Hard Solids
-		uint16_t collided = FALSE;
-		if(e->flags & NPC_SPECIALSOLID) {
-			// Apply x_next/y_next so player is completely outside us
-			bounding_box collision = entity_react_to_collision(&player, e);
-			collided = *((uint32_t*) &collision) > 0;
-			player.x = player.x_next;
-			player.y = player.y_next;
-			if(collided && player.health > 0 && (e->type == OBJ_BLOCK_MOVEH || e->type == OBJ_BLOCK_MOVEV)) {
-				if(blk(player.x, 0, player.y, 0) == 0x41) {
-					// Player got crushed
-					if(player_inflict_damage(100)) return;
-				}
-			}
-			if(collision.bottom) {
-				if(e->flags & NPC_BOUNCYTOP) {
-					player.y_speed = -(1 << CSF);
-					player.grounded = FALSE;
-				} else {
-					playerPlatform = e;
-					playerPlatformTime = 0;
-				}
-			}
-		} // Soft solids
-		else if(e->flags & NPC_SOLID) {
-			bounding_box collision = entity_react_to_collision(&player, e);
-			collided = *((uint32_t*) &collision) > 0;
-			// Don't apply x_next/y_next, push outward 1 pixel at a time
-			if(collision.bottom && e->y > player.y) {
-				player.y -= 1<<CSF;
-				if(e->flags & NPC_BOUNCYTOP) {
-					player.y_speed = -(1 << CSF);
-					player.grounded = FALSE;
-				} else {
-					playerPlatform = e;
-					playerPlatformTime = 0;
-				}
-			} else if(collision.top && e->y < player.y) {
-				player.y += 1<<CSF;
-			} else if(collision.left && e->x < player.x) {
-				player.x += 1<<CSF;
-			} else if(collision.right && e->x > player.x) {
-				player.x -= 1<<CSF;
-			}
-		}
-		// Can damage player if we have an attack stat and no script is running
-		if(e->attack && !playerIFrames && !tscState) {
-			if(!(e->flags & (NPC_SOLID | NPC_SPECIALSOLID))) {
-				// Smaller hitbox if they are pass-through
-				player.hit_box = PLAYER_SOFT_HIT_BOX;
-				collided = entity_overlapping(&player, e);
-				player.hit_box = PLAYER_HARD_HIT_BOX;
-			}
-			if(collided) {
-				// If the enemy has NPC_FRONTATKONLY, and the player is not colliding
-				// with the front of the enemy, the player shouldn't get hurt
-				if(e->flags & NPC_FRONTATKONLY) {
-					if(!PLAYER_DIST_Y(e, pixel_to_sub(e->hit_box.top + 3))) {
-						collided = FALSE;
-					} else {
-						if(e->dir) {
-							if(player.x < e->x) collided = FALSE;
-						} else {
-							if(player.x > e->x) collided = FALSE;
+// ---------------------------------------------------------
+// SNES Optimization Globals
+// We cache 32-bit values into 16-bit variables once per frame
+// to avoid expensive shifting and 32-bit math inside loops.
+// ---------------------------------------------------------
+static int16_t cam_x_int, cam_y_int;
+static int16_t view_left, view_right, view_top, view_bottom;
+
+// Call this internal helper at the start of the frame or update function
+static void update_view_bounds() {
+    cam_x_int = camera.x_shifted; // Assuming x_shifted is the view X in pixels
+    cam_y_int = camera.y_shifted;
+    
+    // Convert camera bounds for fast culling
+    // "camera_xmin" from your original code roughly maps here
+    int16_t cx = camera.x >> CSF;
+    int16_t cy = camera.y >> CSF;
+    
+    // Add a 32px safety margin for "on screen" checks
+    view_left = cx - 32;
+    view_right = cx + 256 + 32; // Assuming 256 width
+    view_top = cy - 32;
+    view_bottom = cy + 224 + 32; // Assuming 224 height
+}
+
+
+    
+// Optimized helper variables
+static int16_t cam_x_int, cam_y_int;
+
+// Update this once per frame (e.g., at start of entities_update)
+static void update_view_cache() {
+    cam_x_int = camera.x_shifted;
+    cam_y_int = camera.y_shifted;
+}
+static uint8_t active_bullets_idx[MAX_BULLETS];
+static int16_t b_screen_x[MAX_BULLETS];
+static int16_t b_screen_y[MAX_BULLETS];
+
+void entities_update(uint8_t draw) {
+    // 16-bit register vars
+    register int16_t i; 
+    uint16_t new_active_count = 0;
+    Entity *e = entityList;
+    Entity *next_e; 
+    
+    // Cache camera to local vars (faster than accessing globals repeatedly)
+    update_view_cache();
+    int16_t cam_x = cam_x_int;
+    int16_t cam_y = cam_y_int;
+
+    // ------------------------------------------------------------------------
+    // PHASE 1: PRE-CALCULATION
+    // Process bullets once per frame, not once per entity.
+    // ------------------------------------------------------------------------
+    uint8_t bullet_count = 0;
+    
+    // Use pointers to iterate arrays (faster than array indexing on 65816)
+    int16_t *bx_ptr = b_screen_x;
+    int16_t *by_ptr = b_screen_y;
+    uint8_t *bidx_ptr = active_bullets_idx;
+    Bullet *b_src = playerBullet;
+
+    for(i = 0; i < MAX_BULLETS; ++i) {
+        if(b_src->ttl) {
+            *bidx_ptr++ = i;
+            // Shift 32-bit to 16-bit coordinates immediately
+            *bx_ptr++ = (int16_t)(b_src->x >> CSF); 
+            *by_ptr++ = (int16_t)(b_src->y >> CSF);
+            bullet_count++;
+        }
+        b_src++; 
+    }
+
+    // Cache Player Position (16-bit)
+    int16_t p_x_i = (int16_t)(player.x >> CSF);
+    int16_t p_y_i = (int16_t)(player.y >> CSF);
+
+    // ------------------------------------------------------------------------
+    // PHASE 2: ENTITY LOOP
+    // ------------------------------------------------------------------------
+    while(e) {
+        // Cache next pointer immediately. 
+        // Essential because 'e' might get deleted/moved, breaking the link.
+        next_e = e->next;
+
+        // 1. Culling
+        if(!e->alwaysActive && !entity_on_screen(e)) {
+            entity_deactivate(e);
+            e = next_e;
+            continue;
+        }
+        
+        new_active_count++;
+
+        // 2. AI Update
+        ENTITY_ONFRAME(e);
+        
+        // State Machine Check
+        if(e->state == STATE_DELETE) { e = entity_delete(e); e = next_e; continue; }
+        if(e->state == STATE_DESTROY) { e = entity_destroy(e); e = next_e; continue; }
+
+        // Cache Entity Data to locals/registers
+        int16_t e_x_i = (int16_t)(e->x >> CSF);
+        int16_t e_y_i = (int16_t)(e->y >> CSF);
+        uint16_t flags = e->flags;
+
+        // 3. Bullet Collision (Optimized Broadphase)
+        if(flags & NPC_SHOOTABLE) {
+            // Define Hitbox boundaries relative to World 0,0
+            int16_t ex1 = e_x_i - e->hit_box.left;
+            
+            // Optimization: Calculate Width/Height instead of Right/Bottom coords
+            // This allows us to use the "Unsigned Comparison Trick"
+            uint16_t e_w = (e_x_i + e->hit_box.right) - ex1;
+            uint16_t e_h = (e_y_i + e->hit_box.bottom) - (e_y_i - e->hit_box.top);
+            int16_t ey1 = e_y_i - e->hit_box.top;
+
+            uint8_t cont = FALSE;
+            
+            // Reset pointers for reading
+            int16_t *cur_bx = b_screen_x;
+            int16_t *cur_by = b_screen_y;
+            uint8_t *cur_bidx = active_bullets_idx;
+
+            for(i = 0; i < bullet_count; i++) {
+                // BROADPHASE: Single branch check
+                // If (Bullet - Left) is negative (wraps to high uint) or > Width, it's outside.
+                if ((uint16_t)(*cur_bx - ex1) > e_w || 
+                    (uint16_t)(*cur_by - ey1) > e_h) {
+                    cur_bx++; cur_by++; cur_bidx++;
+                    continue; 
+                }
+
+                // NARROWPHASE: Load actual bullet data
+                Bullet *b = &playerBullet[*cur_bidx];
+                
+                // Re-calculate boundaries for exact box overlap
+                // (We do this here to avoid doing it for every bullet in the broadphase)
+                int16_t ex2 = ex1 + e_w;
+                int16_t ey2 = ey1 + e_h;
+
+                if(b->extent.x2 >= ex1 && b->extent.x1 <= ex2 &&
+                   b->extent.y2 >= ey1 && b->extent.y1 <= ey2)
+                {   
+                    entity_handle_bullet(e, b);
+                    if(e->state == STATE_DESTROY) {
+                        entity_destroy(e); // Don't assign to 'e', we use next_e later
+                        cont = TRUE;
+                        break;
+                    } else if(e->state == STATE_DELETE) {
+                        entity_delete(e);
+                        cont = TRUE;
+                        break;
+                    }
+                }
+                cur_bx++; cur_by++; cur_bidx++;
+            }
+            if(cont) { e = next_e; continue; }
+        }
+
+        // 4. Physics / Solid Handling
+        // Optimization: Unsigned comparison for "Near Player" check
+        int16_t dx = e_x_i - p_x_i;
+        int16_t dy = e_y_i - p_y_i;
+        
+        if (true) {
+            uint8_t collided = FALSE;
+            
+            if(flags & (NPC_SOLID | NPC_SPECIALSOLID)) {
+                 // Existing Physics Logic preserved
+                 bounding_box collision = entity_react_to_collision(&player, e);
+                 // Fast check if struct is not zero
+                 collided = *((uint32_t*) &collision) > 0; 
+                 
+                 if(flags & NPC_SPECIALSOLID) {
+                     player.x = player.x_next;
+                     player.y = player.y_next;
+                     if(collided && player.health > 0 && (e->type == OBJ_BLOCK_MOVEH || e->type == OBJ_BLOCK_MOVEV)) {
+                         if(blk(player.x, 0, player.y, 0) == 0x41) player_inflict_damage(100);
+                     }
+                 } else {
+                     // Standard Solid
+                     if(collision.bottom && e->y > player.y) {
+                         player.y -= 1<<CSF;
+                         if(flags & NPC_BOUNCYTOP) {
+                             player.y_speed = -(1 << CSF);
+                             player.grounded = FALSE;
+                         } else {
+                             playerPlatform = e;
+                             playerPlatformTime = 0;
+                         }
+                     } else if(collision.top && e->y < player.y) {
+                         player.y += 1<<CSF;
+                     } else if(collision.left && e->x < player.x) {
+                         player.x += 1<<CSF;
+                     } else if(collision.right && e->x > player.x) {
+                         player.x -= 1<<CSF;
+                     }
+                 }
+                 
+                 // Shared platform logic
+                 if((flags & NPC_SPECIALSOLID) && collision.bottom) {
+                     if(flags & NPC_BOUNCYTOP) {
+                         player.y_speed = -(1 << CSF);
+                         player.grounded = FALSE;
+                     } else {
+                         playerPlatform = e;
+                         playerPlatformTime = 0;
+                     }
+                 }
+            }
+            
+            // Player Damage
+            if(e->attack && !playerIFrames && !tscState) {
+                if(!(flags & (NPC_SOLID | NPC_SPECIALSOLID))) {
+                    // Soft hit box check
+                    player.hit_box = PLAYER_SOFT_HIT_BOX;
+                    collided = entity_overlapping(&player, e);
+                    player.hit_box = PLAYER_HARD_HIT_BOX;
+                }
+                if(collided) {
+                    if(flags & NPC_FRONTATKONLY) {
+                         // Optimized vertical distance check
+                         if(!PLAYER_DIST_Y(e, pixel_to_sub(e->hit_box.top + 3))) {
+                             collided = FALSE;
+                         } else {
+							if(e->dir) {
+								if(player.x < e->x) collided = FALSE;
+							} else {
+								if(player.x > e->x) collided = FALSE;
+							}
 						}
-					}
-				}
-				if(collided && player_inflict_damage(e->attack)) return;
-			}
-		}
-		// Damage timer and shaking
-		if(e->damage_value) {
-			e->damage_time--;
-			if(e->shakeWhenHit) {
-				e->xoff = (e->damage_time & 3) - 1;
-			}
-			if(!e->damage_time) {
+                    }
+                    if(collided && player_inflict_damage(e->attack)) return;
+                }
+            }
+        }
+
+        // 5. Visual Effects
+        if(e->damage_value) {
+            e->damage_time--;
+            // Bitwise optimization for shake
+            if(e->shakeWhenHit) e->xoff = (e->damage_time & 3) - 1;
+            if(!e->damage_time) {
 				if(e->flags & NPC_SHOWDAMAGE) {
 					//effect_create_damage(e->damage_value, e, 0, 0);
 				}
 				e->damage_value = 0;
-				e->xoff = 0;
-			}
-		}
-		// Handle sprite movement/changes
-		const AnimationFrame *f = get_animation_frame(e->type);
-		//uint8_t sprite_count = f->numSprite;
-		//if(npc_info[e->type].sprite == NULL) sprite_count = 0;
-		if(draw && !e->hidden) {
-				int x = (e->x>>CSF) - camera.x_shifted - e->display_box.left + e->xoff;
-				int y = (e->y>>CSF) - camera.y_shifted - e->display_box.top;
-				manual_oam_set(id++, x, y, 3, 0, 0, 0, 0, 1);
-			if(e->sheet != NOSHEET) {
-				sprite_pos(e->sprite[0],
-						(e->x>>CSF) - camera.x_shifted - e->display_box.left + e->xoff,
-						(e->y>>CSF) - camera.y_shifted - e->display_box.top);
-				sprite_index(e->sprite[0], e->vramindex + frameOffset[e->sheet][e->frame]);
-				sprite_hflip(e->sprite[0], e->dir);
-				
-				int x = (e->x>>CSF) - camera.x_shifted - e->display_box.left + e->xoff;
-				int y = (e->y>>CSF) - camera.y_shifted - e->display_box.top;
-				x = (x + 4) / 8; y = (y + 80) / 8;
-				manual_oam_set(id++, x, y, 3, 0, 0, 0, 0, 1);
-				//iprintf("\x1b[%hu;%huH%s\n", y, x, "1");
-				//iprintf("ent %d %d ", x, y);
-			} else if(e->tiloc != NOTILOC) {
-				const AnimationFrame *f = npc_info[e->type].sprite->animations[0]->frames[e->frame];
-				if(e->frame != e->oframe) {
-					e->oframe = e->frame;
-					TILES_QUEUE(f->tileset->tiles, e->vramindex, e->framesize);
-				}
-				// We can't just flip the vdpsprites, gotta draw them in backwards order too
-				if(e->dir) {
-					int16_t bx = (e->x>>CSF) - camera.x_shifted + e->display_box.left + e->xoff, 
-							by = (e->y>>CSF) - camera.y_shifted - e->display_box.top;
-					int16_t x = min(f->w, 32);
-					for(uint16_t i = 0; i < e->sprite_count; i++) {
-						sprite_pos(e->sprite[i], bx - x, by);
-						sprite_hflip(e->sprite[i], 1);
-					int xx = bx - x;
-					int y = by;
-					xx = (xx + 4) / 8; y = (y + 80) / 8;
-					manual_oam_set(id++, xx, y, 3, 0, 0, 0, 0, 1);
-						if(x >= f->w) {
-							x = min(f->w, 32);
-							by += 32;
-						} else {
-							x += min(f->w - x, 32);
-						}
-					}
-				} else {
-					int16_t bx = (e->x>>CSF) - camera.x_shifted - e->display_box.left + e->xoff, 
-							by = (e->y>>CSF) - camera.y_shifted - e->display_box.top;
-					int16_t x = 0;
-					for(uint16_t i = 0; i < e->sprite_count; i++) {
-						sprite_pos(e->sprite[i], bx + x, by);
-						sprite_hflip(e->sprite[i], 0);
+                e->xoff = 0;
+            }
+        }
 
-						int xx = bx + x;
-						int y = by;
-						xx = (xx + 4) / 8; y = (y + 80) / 8;
-						manual_oam_set(id++, xx, y, 3, 0, 0, 0, 0, 1);
-						x += 32;
-						if(x >= f->w) {
-							x = 0;
-							by += 32;
-						}
-					}
-				}
-			}
-			vdp_sprites_add(e->sprite, e->sprite_count);
-		}
-		if(moveMeToFront) {
-			moveMeToFront = FALSE;
-			Entity *next = e->next;
-			LIST_REMOVE(entityList, e);
-			LIST_PUSH(entityList, e);
-			e = next;
-		} else e = e->next;
-	}
-	entity_active_count = new_active_count;
+        // 6. Drawing
+        if(draw && !e->hidden) {
+            int16_t base_x = e_x_i - cam_x + e->xoff;
+            
+            // Optimization: Rough screen bounds check to skip logic for off-screen sprites
+            // SNES width 256. Allow generous buffer (-32 to 288)
+            if((uint16_t)(base_x + 32) < 320) {
+                int16_t base_y = e_y_i - cam_y;
+                
+                manual_oam_set(id++, base_x, base_y, 3, 0, 0, 0, 0, 1);
+
+                if(e->sheet != NOSHEET) {
+                    int16_t scr_x = base_x - e->display_box.left;
+                    int16_t scr_y = base_y - e->display_box.top;
+                    
+                    
+                    sprite_pos(e->sprite[0], scr_x, scr_y);
+                    sprite_index(e->sprite[0], e->vramindex + frameOffset[e->sheet][e->frame]);
+                    sprite_hflip(e->sprite[0], e->dir);
+                    vdp_sprites_add(e->sprite, e->sprite_count);
+                } 
+                else if(e->tiloc != NOTILOC) {
+                    // Optimize pointer chasing
+                    const AnimationFrame *f = npc_info[e->type].sprite->animations[0]->frames[e->frame];
+                    
+                    if(e->frame != e->oframe) {
+                        e->oframe = e->frame;
+                        TILES_QUEUE(f->tileset->tiles, e->vramindex, e->framesize);
+                    }
+                    
+                    int16_t bx, by, step_x;
+                    int16_t w = min(f->w, 32);
+
+                    if(e->dir) {
+                        bx = base_x + e->display_box.left - w;
+                        by = base_y - e->display_box.top;
+                        
+                        for(i = 0; i < e->sprite_count; i++) {
+                            sprite_pos(e->sprite[i], bx, by);
+                            sprite_hflip(e->sprite[i], 1);
+                            
+                            if(w >= f->w) {
+                                w = min(f->w, 32);
+                                by += 32;
+                                bx = base_x + e->display_box.left - w; // Reset X
+                            } else {
+                                int16_t diff = min(f->w - w, 32);
+                                w += diff;
+                                bx -= diff; // Move Left
+                            }
+                        }
+                    } else {
+                        bx = base_x - e->display_box.left;
+                        by = base_y - e->display_box.top;
+                        int16_t x_accum = 0;
+                        
+                        for(i = 0; i < e->sprite_count; i++) {
+                            sprite_pos(e->sprite[i], bx + x_accum, by);
+                            sprite_hflip(e->sprite[i], 0);
+
+                            x_accum += 32;
+                            if(x_accum >= f->w) {
+                                x_accum = 0;
+                                by += 32;
+                            }
+                        }
+                    }
+                    vdp_sprites_add(e->sprite, e->sprite_count);
+                }
+            }
+        }
+
+        // 7. List Management
+        if(moveMeToFront) {
+            moveMeToFront = FALSE;
+            // logic: remove 'e' from current spot, push to head
+            LIST_REMOVE(entityList, e);
+            LIST_PUSH(entityList, e);
+            // e is now head, but we iterate using the cached 'next_e'
+        }
+        
+        // Advance to the pre-calculated next pointer
+        e = next_e;
+    }
+    entity_active_count = new_active_count;
 }
+
+  
 
 void entity_handle_bullet(Entity *e, Bullet *b) {
 	//uint16_t flags = e->flags | e->eflags;
@@ -749,16 +876,48 @@ uint8_t collide_stage_ceiling(Entity *e) {
 	return result;
 }
 
+
 uint8_t entity_overlapping(Entity *a, Entity *b) {
-	int16_t ax1 = sub_to_pixel(a->x) - (a->dir ? a->hit_box.right : a->hit_box.left),
-		ax2 = sub_to_pixel(a->x) + (a->dir ? a->hit_box.left : a->hit_box.right),
-		ay1 = sub_to_pixel(a->y) - a->hit_box.top,
-		ay2 = sub_to_pixel(a->y) + a->hit_box.bottom,
-		bx1 = sub_to_pixel(b->x) - (b->dir ? b->hit_box.right : b->hit_box.left),
-		bx2 = sub_to_pixel(b->x) + (b->dir ? b->hit_box.left : b->hit_box.right),
-		by1 = sub_to_pixel(b->y) - b->hit_box.top,
-		by2 = sub_to_pixel(b->y) + b->hit_box.bottom;
-	return (ax1 < bx2 && ax2 > bx1 && ay1 < by2 && ay2 > by1);
+    int16_t ax, bx, ay, by;
+    int16_t a_width_ofs_1, a_width_ofs_2;
+    int16_t b_width_ofs_1, b_width_ofs_2;
+
+    // 1. Convert positions to 16-bit pixel coordinates first
+    ax = sub_to_pixel(a->x);
+    bx = sub_to_pixel(b->x);
+
+    // 2. Resolve Hitbox X offsets based on direction
+    //    Ideally, 'dir' should be 0 or 1 so we can use it as an array index 
+    //    to avoid branching, but 'if' is better than ternary here.
+    if (a->dir) {
+        a_width_ofs_1 = a->hit_box.left;
+        a_width_ofs_2 = a->hit_box.right;
+    } else {
+        a_width_ofs_1 = a->hit_box.right;
+        a_width_ofs_2 = a->hit_box.left;
+    }
+
+    if (b->dir) {
+        b_width_ofs_1 = b->hit_box.left;
+        b_width_ofs_2 = b->hit_box.right;
+    } else {
+        b_width_ofs_1 = b->hit_box.right;
+        b_width_ofs_2 = b->hit_box.left;
+    }
+
+    // 3. Early Exit on X Axis
+    // Logic: (ax1 < bx2) && (ax2 > bx1)
+    if ( (ax - a_width_ofs_1) >= (bx + b_width_ofs_2) ) return 0;
+    if ( (ax + a_width_ofs_2) <= (bx - b_width_ofs_1) ) return 0;
+
+    // 4. Calculate Y only if X overlapped
+    ay = sub_to_pixel(a->y);
+    by = sub_to_pixel(b->y);
+
+    if ( (ay - a->hit_box.top) >= (by + b->hit_box.bottom) ) return 0;
+    if ( (ay + a->hit_box.bottom) <= (by - b->hit_box.top) ) return 0;
+
+    return 1;
 }
 
 bounding_box entity_react_to_collision(Entity *a, Entity *b) {

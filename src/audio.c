@@ -44,9 +44,11 @@ void sound_play(uint8_t id, uint8_t priority) {
 	//xgm_pcm_play(0x40 + id, priority, soundChannel++);
 	if(soundChannel > 3) soundChannel = 1;
 }
-
+extern u8 music;
 void song_play(uint8_t id) {
 	// Muted?
+	music = id;
+	//play_music_track2(id);
 	if(cfg_music_mute && gamemode != GM_SOUNDTEST) {
 		if(songPlaying) {
             //xgm_music_pause();
