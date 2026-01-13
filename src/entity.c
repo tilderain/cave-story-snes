@@ -215,38 +215,13 @@ u8 id = 1;
 // to avoid expensive shifting and 32-bit math inside loops.
 // ---------------------------------------------------------
 static int16_t cam_x_int, cam_y_int;
-static int16_t view_left, view_right, view_top, view_bottom;
+static uint8_t active_bullets_idx[MAX_BULLETS];
 
-// Call this internal helper at the start of the frame or update function
-static void update_view_bounds() {
-    cam_x_int = camera.x_shifted; // Assuming x_shifted is the view X in pixels
-    cam_y_int = camera.y_shifted;
-    
-    // Convert camera bounds for fast culling
-    // "camera_xmin" from your original code roughly maps here
-    int16_t cx = camera.x >> CSF;
-    int16_t cy = camera.y >> CSF;
-    
-    // Add a 32px safety margin for "on screen" checks
-    view_left = cx - 32;
-    view_right = cx + 256 + 32; // Assuming 256 width
-    view_top = cy - 32;
-    view_bottom = cy + 224 + 32; // Assuming 224 height
-}
-
-
-    
-// Optimized helper variables
-static int16_t cam_x_int, cam_y_int;
-
-// Update this once per frame (e.g., at start of entities_update)
+// Update this once per frame to avoid 32-bit global reads in loops
 static void update_view_cache() {
     cam_x_int = camera.x_shifted;
     cam_y_int = camera.y_shifted;
 }
-static uint8_t active_bullets_idx[MAX_BULLETS];
-static int16_t b_screen_x[MAX_BULLETS];
-static int16_t b_screen_y[MAX_BULLETS];
 
 void entities_update(uint8_t draw) {
     // 16-bit register vars
@@ -255,32 +230,25 @@ void entities_update(uint8_t draw) {
     Entity *e = entityList;
     Entity *next_e; 
     
-    // Cache camera to local vars (faster than accessing globals repeatedly)
+    // Cache camera to local vars
     update_view_cache();
     int16_t cam_x = cam_x_int;
     int16_t cam_y = cam_y_int;
 
     // ------------------------------------------------------------------------
     // PHASE 1: PRE-CALCULATION
-    // Process bullets once per frame, not once per entity.
+    // Build a list of active bullet indices. 
+    // We do NOT cache X/Y coordinates here because bullets have width/height
+    // and caching a single point causes collision errors with large bullets.
     // ------------------------------------------------------------------------
     uint8_t bullet_count = 0;
-    
-    // Use pointers to iterate arrays (faster than array indexing on 65816)
-    int16_t *bx_ptr = b_screen_x;
-    int16_t *by_ptr = b_screen_y;
     uint8_t *bidx_ptr = active_bullets_idx;
-    Bullet *b_src = playerBullet;
-
+    
     for(i = 0; i < MAX_BULLETS; ++i) {
-        if(b_src->ttl) {
+        if(playerBullet[i].ttl) {
             *bidx_ptr++ = i;
-            // Shift 32-bit to 16-bit coordinates immediately
-            *bx_ptr++ = (int16_t)(b_src->x >> CSF); 
-            *by_ptr++ = (int16_t)(b_src->y >> CSF);
             bullet_count++;
         }
-        b_src++; 
     }
 
     // Cache Player Position (16-bit)
@@ -292,7 +260,6 @@ void entities_update(uint8_t draw) {
     // ------------------------------------------------------------------------
     while(e) {
         // Cache next pointer immediately. 
-        // Essential because 'e' might get deleted/moved, breaking the link.
         next_e = e->next;
 
         // 1. Culling
@@ -316,47 +283,37 @@ void entities_update(uint8_t draw) {
         int16_t e_y_i = (int16_t)(e->y >> CSF);
         uint16_t flags = e->flags;
 
-        // 3. Bullet Collision (Optimized Broadphase)
+        // 3. Bullet Collision (Optimized Loop)
         if(flags & NPC_SHOOTABLE) {
-            // Define Hitbox boundaries relative to World 0,0
+            // Calculate Entity Bounds in World Space (16-bit)
             int16_t ex1 = e_x_i - e->hit_box.left;
-            
-            // Optimization: Calculate Width/Height instead of Right/Bottom coords
-            // This allows us to use the "Unsigned Comparison Trick"
-            uint16_t e_w = (e_x_i + e->hit_box.right) - ex1;
-            uint16_t e_h = (e_y_i + e->hit_box.bottom) - (e_y_i - e->hit_box.top);
+            int16_t ex2 = e_x_i + e->hit_box.right;
             int16_t ey1 = e_y_i - e->hit_box.top;
+            int16_t ey2 = e_y_i + e->hit_box.bottom;
 
             uint8_t cont = FALSE;
-            
-            // Reset pointers for reading
-            int16_t *cur_bx = b_screen_x;
-            int16_t *cur_by = b_screen_y;
             uint8_t *cur_bidx = active_bullets_idx;
 
-            for(i = 0; i < bullet_count; i++) {
-                // BROADPHASE: Single branch check
-                // If (Bullet - Left) is negative (wraps to high uint) or > Width, it's outside.
-                if ((uint16_t)(*cur_bx - ex1) > e_w || 
-                    (uint16_t)(*cur_by - ey1) > e_h) {
-                    cur_bx++; cur_by++; cur_bidx++;
-                    continue; 
-                }
+			int16_t ent_scr_x = e_x_i - cam_x; // Entity position relative to screen
+			int16_t ent_scr_y = e_y_i - cam_y;
 
-                // NARROWPHASE: Load actual bullet data
-                Bullet *b = &playerBullet[*cur_bidx];
-                
-                // Re-calculate boundaries for exact box overlap
-                // (We do this here to avoid doing it for every bullet in the broadphase)
-                int16_t ex2 = ex1 + e_w;
-                int16_t ey2 = ey1 + e_h;
+			for(i = 0; i < bullet_count; i++) {
+			    Bullet *b = &playerBullet[active_bullets_idx[i]];
+                if(!b->ttl) continue;
 
-                if(b->extent.x2 >= ex1 && b->extent.x1 <= ex2 &&
-                   b->extent.y2 >= ey1 && b->extent.y1 <= ey2)
-                {   
-                    entity_handle_bullet(e, b);
+			    // Calculate bullet screen position
+			    int16_t bul_scr_x = (int16_t)(b->x >> CSF) - cam_x;
+			    int16_t bul_scr_y = (int16_t)(b->y >> CSF) - cam_y;
+
+			    // Now check collision using these small, safe numbers
+			    if(bul_scr_x + b->hit_box.right >= ent_scr_x - e->hit_box.left &&
+			       bul_scr_x - b->hit_box.left <= ent_scr_x + e->hit_box.right &&
+			       bul_scr_y + b->hit_box.bottom >= ent_scr_y - e->hit_box.top &&
+			       bul_scr_y - b->hit_box.top <= ent_scr_y + e->hit_box.bottom) 
+			    {
+       				entity_handle_bullet(e, b);
                     if(e->state == STATE_DESTROY) {
-                        entity_destroy(e); // Don't assign to 'e', we use next_e later
+                        entity_destroy(e); 
                         cont = TRUE;
                         break;
                     } else if(e->state == STATE_DELETE) {
@@ -365,7 +322,6 @@ void entities_update(uint8_t draw) {
                         break;
                     }
                 }
-                cur_bx++; cur_by++; cur_bidx++;
             }
             if(cont) { e = next_e; continue; }
         }
@@ -375,11 +331,13 @@ void entities_update(uint8_t draw) {
         int16_t dx = e_x_i - p_x_i;
         int16_t dy = e_y_i - p_y_i;
         
-        if (true) {
+        // Only run physics if near player (e.g. within 64 pixels)
+        // Using unsigned casting trick: if (unsigned)dx > 64 includes negative values (large uint)
+        // You can adjust the range as needed, or remove the 'true' wrapper
+        if (true) { 
             uint8_t collided = FALSE;
             
             if(flags & (NPC_SOLID | NPC_SPECIALSOLID)) {
-                 // Existing Physics Logic preserved
                  bounding_box collision = entity_react_to_collision(&player, e);
                  // Fast check if struct is not zero
                  collided = *((uint32_t*) &collision) > 0; 
@@ -436,12 +394,12 @@ void entities_update(uint8_t draw) {
                          if(!PLAYER_DIST_Y(e, pixel_to_sub(e->hit_box.top + 3))) {
                              collided = FALSE;
                          } else {
-							if(e->dir) {
-								if(player.x < e->x) collided = FALSE;
-							} else {
-								if(player.x > e->x) collided = FALSE;
-							}
-						}
+                            if(e->dir) {
+                                if(player.x < e->x) collided = FALSE;
+                            } else {
+                                if(player.x > e->x) collided = FALSE;
+                            }
+                        }
                     }
                     if(collided && player_inflict_damage(e->attack)) return;
                 }
@@ -454,10 +412,10 @@ void entities_update(uint8_t draw) {
             // Bitwise optimization for shake
             if(e->shakeWhenHit) e->xoff = (e->damage_time & 3) - 1;
             if(!e->damage_time) {
-				if(e->flags & NPC_SHOWDAMAGE) {
-					//effect_create_damage(e->damage_value, e, 0, 0);
-				}
-				e->damage_value = 0;
+                if(e->flags & NPC_SHOWDAMAGE) {
+                    //effect_create_damage(e->damage_value, e, 0, 0);
+                }
+                e->damage_value = 0;
                 e->xoff = 0;
             }
         }
@@ -477,7 +435,6 @@ void entities_update(uint8_t draw) {
                     int16_t scr_x = base_x - e->display_box.left;
                     int16_t scr_y = base_y - e->display_box.top;
                     
-                    
                     sprite_pos(e->sprite[0], scr_x, scr_y);
                     sprite_index(e->sprite[0], e->vramindex + frameOffset[e->sheet][e->frame]);
                     sprite_hflip(e->sprite[0], e->dir);
@@ -492,7 +449,7 @@ void entities_update(uint8_t draw) {
                         TILES_QUEUE(f->tileset->tiles, e->vramindex, e->framesize);
                     }
                     
-                    int16_t bx, by, step_x;
+                    int16_t bx, by;
                     int16_t w = min(f->w, 32);
 
                     if(e->dir) {
@@ -537,10 +494,8 @@ void entities_update(uint8_t draw) {
         // 7. List Management
         if(moveMeToFront) {
             moveMeToFront = FALSE;
-            // logic: remove 'e' from current spot, push to head
             LIST_REMOVE(entityList, e);
             LIST_PUSH(entityList, e);
-            // e is now head, but we iterate using the cached 'next_e'
         }
         
         // Advance to the pre-calculated next pointer
@@ -548,7 +503,6 @@ void entities_update(uint8_t draw) {
     }
     entity_active_count = new_active_count;
 }
-
   
 
 void entity_handle_bullet(Entity *e, Bullet *b) {
