@@ -564,10 +564,18 @@ void stage_update() {
 	}
 	
 	if(true) {
-		vdp_hscroll(VDP_PLAN_A, -sub_to_pixel(camera.x) + SCREEN_HALF_W);
-		vdp_vscroll(VDP_PLAN_A, sub_to_pixel(camera.y) - SCREEN_HALF_H);
-		vdp_hscroll(VDP_PLAN_B, -sub_to_pixel(camera.x) / 4 + SCREEN_HALF_W);
-		vdp_vscroll(VDP_PLAN_B, sub_to_pixel(camera.y) / 4 - SCREEN_HALF_H);
+
+        int32_t cam_x_px = sub_to_pixel(camera.x);
+        int32_t cam_y_px = sub_to_pixel(camera.y);
+
+        // PLAN A (Foreground - 1:1 speed)
+        vdp_hscroll(VDP_PLAN_A, -cam_x_px + SCREEN_HALF_W);
+        vdp_vscroll(VDP_PLAN_A, cam_y_px - SCREEN_HALF_H);
+
+        // PLAN B (Background - 1/4 speed parallax)
+        // Optimization: Use >> 2 instead of / 4 to eliminate 32-bit division
+        vdp_hscroll(VDP_PLAN_B, -(cam_x_px >> 2) + SCREEN_HALF_W);
+        vdp_vscroll(VDP_PLAN_B, (cam_y_px >> 2) - SCREEN_HALF_H);
 	} else if(true) {
 		// PLAN_A Tile scroll
 		int16_t off[32];
